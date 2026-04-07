@@ -1,5 +1,13 @@
 # 本仓库根目录即为 Vite 前端；构建 dist 并发布到 GitHub Pages。
-# 首次：仓库 Settings → Pages → Source 选 GitHub Actions。
+#
+# 【必须】否则 deploy 会 404：打开
+#   https://github.com/<owner>/<repo>/settings/pages
+# → Build and deployment → Source → 选「GitHub Actions」（不要选 Deploy from a branch）。
+#
+# 若仓库为「组织」仓库：组织 Settings → Actions → General 中需允许
+# workflows 读写，且 Pages 功能未被组织策略关闭。
+#
+# 个人免费版：私有仓库可能无法使用 GitHub Pages（需升级或改为公开仓库）。
 name: Deploy to GitHub Pages
 
 on:
@@ -40,6 +48,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
