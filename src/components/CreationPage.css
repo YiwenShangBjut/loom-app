@@ -1,0 +1,864 @@
+.creation-page {
+  /* just a hook for extra overrides */
+  position: relative;
+}
+
+/* My Creation top-left back button should show circular press highlight. */
+.creation-topbar .topbar-row .icon-btn {
+  border-radius: 50%;
+}
+
+.creation-topbar .topbar-row .icon-btn:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Card stack sits in the middle-lower area */
+.creation-stack-wrap {
+  /* Hard-position so "move down" is always visible. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100vh * 64 / 1280);
+  bottom: auto;
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  z-index: 55;
+}
+
+/* Under the big title */
+.creation-subtitle {
+  padding: 0 14px;
+  margin: calc(100vh * 6 / 1280) 0 0;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 32 / 1280);
+  font-weight: 500;
+  color: #2c2c2c;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.creation-try-gallery-btn {
+  margin-top: calc(100vh * 64 / 1280);
+  align-self: center;
+  height: calc(100vh * 44 / 1280);
+  min-height: 40px;
+  padding: 0 20px;
+  border: 0.5px solid #494949;
+  border-radius: 999px;
+  background: #fff;
+  color: #494949;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 60;
+  position: relative;
+}
+
+.creation-try-gallery-btn:hover {
+  background: #fff;
+}
+
+.creation-try-gallery-btn:active {
+  background: rgba(73, 73, 73, 0.08);
+}
+
+.creation-gallery-content {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Space for fixed bottom toolbar (one row of buttons + safe area) */
+  padding: 8px 14px calc(76px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.creation-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.creation-gallery-footer-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.creation-gallery-footer-actions .creation-gallery-footer-btn {
+  pointer-events: auto;
+}
+
+.creation-gallery-footer-btn {
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh * 84 / 1280);
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: #f97316;
+  color: #fff;
+  font-family: "Noto Sans", Medium;
+  font-size: calc(100vh * 28 / 1280);
+  font-weight: 400;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-gallery-footer-btn:hover {
+  background: #ea580c;
+}
+
+.creation-gallery-footer-btn:active {
+  background: #c2410c;
+}
+
+.creation-share-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.creation-share-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-share-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(85vh, 520px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  animation: creation-share-sheet-in 0.22s ease-out;
+}
+
+@keyframes creation-share-sheet-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0.94;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.creation-share-sheet-handle {
+  width: 40px;
+  height: 4px;
+  margin: 6px auto 12px;
+  border-radius: 99px;
+  background: #e0dcd4;
+}
+
+.creation-share-sheet-title {
+  margin: 0 0 6px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 600;
+  color: #2c2c2c;
+  text-align: center;
+}
+
+.creation-share-sheet-hint {
+  margin: 0 0 16px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  font-weight: 400;
+  color: #666;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.creation-share-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creation-share-sheet-action {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0.5px solid #494949;
+  border-radius: 12px;
+  background: #fff;
+  color: #494949;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-share-sheet-action:active {
+  background: rgba(73, 73, 73, 0.06);
+}
+
+.creation-share-sheet-cancel {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #666;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 17 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-share-sheet-cancel:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.creation-gallery-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-gallery-empty-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: calc(100vh * 20 / 1280) calc(100vh * 24 / 1280);
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.creation-gallery-empty-placeholder-text {
+  margin: 0;
+  max-width: 100%;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.35;
+  text-align: left;
+}
+
+/* 网格单元内铺满正方形，内容来自离开 Create 时缓存的卡片导出图 */
+.creation-gallery-card .creation-card-preview-inner {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.creation-gallery-card .creation-card-preview-img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Date label above card stack */
+.creation-date {
+  width: 100%;
+  text-align: center;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 36 / 1280);
+  font-weight: 700;
+  color: #2c2c2c;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 0 calc(100vh * 64 / 1280);
+  position: relative;
+  z-index: 60;
+}
+
+.creation-stack {
+  position: relative;
+  width: 100%;
+  height: calc(100vh * 660 / 1280);
+  max-height: 720px;
+  overflow: hidden; /* keep shadows and card layers within the stack */
+  touch-action: pan-y;
+  --stack-base-top: calc(100vh * 40 / 1280);
+}
+
+.creation-stack-card {
+  position: absolute;
+  left: 0;
+  top: var(--stack-base-top);
+  right: 0;
+  margin: 0 auto;
+  width: 100%;
+  height: calc(100% - var(--stack-base-top));
+
+  border-radius: 18px;
+  background: #ffffff;
+  /* shadow is drawn via ::before to avoid square artifacts under rounded corners */
+  box-shadow: none;
+  overflow: hidden; /* keep shadow from spilling to the page background */
+  isolation: isolate;
+
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  box-sizing: border-box;
+
+  /* Stack transforms */
+  --drag-x: 0px;
+  /* 只用 scale()，避免 scaleX/scaleY 不一致导致整张卡（含预览）横向压扁 */
+  transform: translateX(var(--drag-x)) translateY(var(--ty, 0px)) scale(var(--scale, 1));
+  transition: transform 250ms ease, opacity 250ms ease;
+  opacity: 1;
+
+  /* Use inset shadows for separation (no spill to background). */
+  --card-shadow: inset 0 10px 18px -12px rgba(0, 0, 0, 0.12);
+  --card-border-alpha: 0.05;
+}
+
+.creation-stack-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: var(--card-shadow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.creation-stack-card[data-depth='0'] {
+  z-index: 20;
+  --ty: 0px;
+  --scale: 1;
+  --card-shadow: inset 0 10px 18px -12px rgba(0, 0, 0, 0.10);
+  --card-border-alpha: 0.05;
+}
+
+.creation-stack-card[data-depth='1'] {
+  z-index: 19;
+  --ty: -12px;
+  --scale: 0.985;
+  opacity: 0.96;
+  --card-shadow: inset 0 12px 20px -12px rgba(0, 0, 0, 0.14);
+  --card-border-alpha: 0.06;
+}
+
+.creation-stack-card[data-depth='2'] {
+  z-index: 18;
+  --ty: -24px;
+  --scale: 0.97;
+  opacity: 0.92;
+  --card-shadow: inset 0 14px 22px -12px rgba(0, 0, 0, 0.16);
+  --card-border-alpha: 0.08;
+}
+
+.creation-stack-card[data-depth='3'] {
+  z-index: 17;
+  --ty: -36px;
+  --scale: 0.955;
+  opacity: 0.88;
+  --card-shadow: inset 0 16px 24px -12px rgba(0, 0, 0, 0.18);
+  --card-border-alpha: 0.10;
+}
+
+.creation-stack-card[data-depth='0'][data-dragging='true'] {
+  transition: none;
+}
+
+.creation-card-inner {
+  position: relative;
+  z-index: 1; /* above shadow layer */
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, var(--card-border-alpha));
+  padding: calc(100vh * 16 / 1280) calc(100vw * 14 / 720) calc(100vh * 18 / 1280);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(100vh * 10 / 1280);
+}
+
+.creation-card-preview {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  margin-top: 0;
+  transform: none;
+}
+
+.creation-card-preview-inner {
+  /* 与 cached 卡片 PNG 尺寸一致（240×210 = 320:280）；flex 居中避免部分 WebView 把 img 拉满变形 */
+  width: 240px;
+  height: 210px;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.creation-card-preview-img {
+  display: block;
+  flex-shrink: 0;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* 离屏渲染用：生成静态 PNG，不影响卡片交互 */
+.creation-card-export-host {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 720px;
+  height: 980px;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Detail view export host: taller offscreen viewport to preserve upper content. */
+.creation-detail-export-host {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 720px;
+  height: 1280px;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Detail stories export host: keep offscreen like other export canvases. */
+.creation-detail-stories-export-host {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 720px;
+  height: 720px;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.creation-card-meta {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(100vh * 8 / 1280);
+}
+
+.creation-card-title {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 600;
+  color: #2c2c2c;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.creation-card-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  font-weight: 400;
+  color: #6b6b6b;
+  line-height: 1.35;
+}
+
+.creation-card-actions {
+  margin-top: calc(100vh * 10 / 1280);
+}
+
+.creation-card-cta-btn {
+  width: 100%;
+  height: calc(100vh * 48 / 1280);
+  padding: 0 calc(100vw * 20 / 720);
+  background: #fff;
+  border: 0.5px solid #ff7f44;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #ff7f44;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.creation-card-cta-btn:hover {
+  background: #fff5f2;
+}
+
+.creation-card-empty-preview {
+  width: 100%;
+  height: 210px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #fff3e7;
+  border: 0.5px dashed rgba(255, 127, 68, 0.45);
+}
+
+.creation-card-empty-preview--guide {
+  background: linear-gradient(180deg, #fff3e7 0%, #ffffff 100%);
+  border: 0.5px solid rgba(255, 127, 68, 0.25);
+}
+
+.creation-card-inner--clickable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch devices often keep :hover after tap, which left the card stuck on #fafafa.
+   Only apply hover feedback on devices with real hover (mouse / trackpad). */
+@media (hover: hover) and (pointer: fine) {
+  .creation-card-inner--clickable:hover {
+    background: #fafafa;
+  }
+}
+
+.creation-card-inner--clickable:active {
+  background: #ffffff;
+}
+
+/* ── Detail view (after clicking a creation card) ─────────────────────────── */
+.creation-detail-view {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 100%;
+  overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(100vh * 24 / 1280);
+  padding: calc(100vh * 16 / 1280) calc(100vw * 24 / 720) calc(100vh * 48 / 1280);
+}
+
+/* Let the parent canvas area own scrolling in detail mode (desktop + touch). */
+.creation-canvas-area--detail {
+  overflow: visible;
+}
+
+/* Use wrapper as the canonical scroll container in detail mode,
+   so dragging the right scrollbar always scrolls the detail page. */
+.creation-canvas-wrapper--detail {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/old Edge */
+}
+
+.creation-canvas-wrapper--detail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chromium/Safari */
+}
+
+.creation-canvas-wrapper--detail .creation-canvas-area {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+}
+
+/* Override CreatePage global first-child clamp for detail view. */
+.creation-canvas-wrapper--detail .creation-canvas-area > .creation-detail-view:first-of-type {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible !important;
+}
+
+/* Allow detail content height to participate in wrapper scrolling. */
+.creation-canvas-wrapper--detail .creation-canvas-area > div:first-of-type {
+  min-height: auto;
+  overflow: visible;
+}
+
+.creation-detail-date {
+  width: 100%;
+  text-align: left;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: calc(100vh * 28 / 1280);
+  font-weight: 600;
+  color: #2c2c2c;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.creation-detail-canvas-wrap,
+.creation-detail-stories-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+/* 仅让 canvas 占满容器，不作用在气泡定位层 */
+.creation-detail-canvas-wrap > div,
+.creation-detail-stories-wrap > div:first-of-type {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.creation-detail-static-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.creation-detail-canvas-wrap--draggable {
+  touch-action: none;
+  cursor: grab;
+}
+
+.creation-detail-canvas-wrap--draggable.is-dragging {
+  cursor: grabbing;
+}
+
+.creation-detail-actions-row {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.creation-detail-save-btn {
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh * 52 / 1280);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #ff7f44;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-detail-save-btn:hover {
+  background: #e66f34;
+}
+
+.creation-detail-save-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.creation-detail-name-btn {
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh * 52 / 1280);
+  padding: 0 10px;
+  border: 0.5px solid #494949;
+  border-radius: 999px;
+  background: #fff;
+  color: #494949;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-detail-name-btn:hover {
+  background: rgba(73, 73, 73, 0.06);
+}
+
+.creation-detail-name-btn:active {
+  background: rgba(73, 73, 73, 0.1);
+}
+
+.creation-detail-stories-title {
+  width: 100%;
+  text-align: left;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 600;
+  color: #2c2c2c;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.creation-detail-edit-btn {
+  width: 100%;
+  height: calc(100vh * 52 / 1280);
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #ff7f44;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.creation-detail-edit-btn:hover {
+  background: #e66f34;
+}
+
+.creation-detail-edit-btn:active {
+  background: #d8622d;
+}
+
+.creation-detail-stories-wrap {
+  position: relative;
+}
+
+.creation-detail-stories-pan-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.creation-detail-stories-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+.creation-export-loading {
+  position: relative;
+  background: #ffffff;
+}
+
+.creation-export-loading-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  border: 2px solid rgba(0, 0, 0, 0.16);
+  border-top-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  animation: creation-loading-spin 0.85s linear infinite;
+}
+
+@keyframes creation-loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.creation-detail-thread-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #2c2c2c;
+}
+
+.creation-detail-thread-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.creation-detail-thread-list li:last-child {
+  border-bottom: none;
+}
+
+/* 气泡定位层（已弃用，保留以防回退）：只负责 left/top，不设宽高，由内层 span 撑开 */
+.creation-detail-stories-wrap .creation-detail-label-outer {
+  position: absolute;
+  display: inline-block;
+  pointer-events: auto;
+  z-index: 10;
+  touch-action: none;
+}
+
+/* 紫色气泡本体：span 随文字收缩，一行最多 20 字，高度上限 72px */
+.creation-detail-stories-wrap .creation-detail-label {
+  display: inline-block;
+  max-width: 20ch;
+  max-height: 72px;
+  padding: 4px 8px;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: pre-line;
+  word-break: break-word;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  background: rgba(128, 64, 128, 0.65);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+

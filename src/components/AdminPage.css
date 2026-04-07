@@ -1,0 +1,254 @@
+.admin-page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFF3E7;
+  padding: 0 calc((100vw - 100vw * 640 / 720) / 2);
+}
+
+.admin-home-nav-btn {
+  position: absolute;
+  top: calc(100vh * 24 / 1280);
+  right: calc((100vw - 100vw * 640 / 720) / 2);
+  padding: calc(100vh * 10 / 1280) calc(100vw * 14 / 720);
+  border-radius: 14px;
+  border: 1px solid rgba(44, 44, 44, 0.18);
+  background: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  font-weight: 500;
+  color: #2c2c2c;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  z-index: 2;
+}
+
+.admin-home-nav-btn:hover {
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-home-nav-btn:active {
+  background: #f5f5f5;
+}
+
+.admin-home-nav-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-content {
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(100vh * 24 / 1280);
+}
+
+.admin-title {
+  margin: 0;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 44 / 1280);
+  font-weight: 700;
+  color: #2c2c2c;
+  letter-spacing: -0.02em;
+}
+
+.admin-memory {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 14 / 1280);
+  color: #666;
+  padding: calc(100vh * 6 / 1280) calc(100vw * 10 / 720);
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+}
+
+.admin-actions {
+  display: flex;
+  flex-direction: row;
+  gap: calc(100vw * 16 / 720);
+  width: 100%;
+}
+
+.admin-btn {
+  flex: 1;
+  padding: calc(100vh * 14 / 1280) calc(100vw * 16 / 720);
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.admin-btn:hover {
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-btn:active {
+  background: #f5f5f5;
+}
+
+.admin-btn-danger {
+  background: #fff5f2;
+  color: #c2410c;
+}
+
+.admin-btn-danger:hover {
+  background: #fff0ea;
+}
+
+.admin-status {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  color: #2c2c2c;
+}
+
+.admin-creations-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(100vh * 8 / 1280);
+}
+
+.admin-thumbs-scroll {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: calc(100vw * 12 / 720);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: calc(100vh * 4 / 1280);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-thumb-card {
+  flex: 0 0 auto;
+  width: min(150px, 38vw);
+  height: calc(100vh * 220 / 1280);
+  border-radius: 16px;
+  border: 1px solid rgba(44, 44, 44, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+.admin-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.admin-thumb-loading {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  color: rgba(44, 44, 44, 0.7);
+}
+
+.admin-thumb-empty {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  color: rgba(44, 44, 44, 0.7);
+}
+
+.admin-subject {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(100vh * 8 / 1280);
+}
+
+.admin-subject-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: calc(100vw * 12 / 720);
+  align-items: stretch;
+}
+
+.admin-subject-row .admin-input {
+  flex: 1 1 auto;
+  width: auto; /* 防止与外层 flex 冲突 */
+  min-width: 0;
+}
+
+.admin-subject-save-btn {
+  flex: 0 0 auto;
+  padding: calc(100vh * 12 / 1280) calc(100vw * 16 / 720);
+  border-radius: 16px;
+  border: 1px solid rgba(44, 44, 44, 0.18);
+  background: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.admin-subject-save-btn:hover {
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-subject-save-btn:active {
+  background: #f5f5f5;
+}
+
+.admin-subject-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-label {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.admin-input {
+  width: 100%;
+  padding: calc(100vh * 12 / 1280) calc(100vw * 12 / 720);
+  border-radius: 16px;
+  border: 1px solid rgba(44, 44, 44, 0.18);
+  background: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  color: #2c2c2c;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: rgba(44, 44, 44, 0.35);
+  box-shadow: 0 0 0 4px rgba(255, 168, 120, 0.25);
+}
+
+.admin-hint {
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 14 / 1280);
+  color: rgba(44, 44, 44, 0.7);
+}
+
+/* 离屏导出 PNG 用：必须给 LoomCanvas 一个非 0 宽高，否则 Pixi init 时会退回到 window 尺寸 */
+.admin-loom-export-host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: min(720px, 92vw);
+  /* LoomRenderer 绘制在较窄视口时上方更容易被裁切，所以离屏导出要给更“高”的视口 */
+  height: min(980px, 92vh);
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+

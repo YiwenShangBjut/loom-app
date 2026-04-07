@@ -1,0 +1,43 @@
+.community-page {
+  background: #fff3e7;
+}
+
+.community-subtitle {
+  margin: 0;
+  padding-left: 0;
+  width: 100%;
+  text-align: left;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 32 / 1280);
+  font-weight: 500;
+  color: rgba(44, 44, 44, 0.72);
+}
+
+.community-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 14px calc(100vh * 48 / 1280);
+}
+
+.community-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.community-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.community-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

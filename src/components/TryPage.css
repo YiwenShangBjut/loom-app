@@ -1,0 +1,758 @@
+/* Try 页：空白、白底 canvas，填满 canvas 区域 */
+.try-canvas-blank {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+}
+
+.try-canvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+  touch-action: none;
+}
+
+.try-canvas-pan {
+  cursor: grab;
+}
+
+.try-canvas-pan:active {
+  cursor: grabbing;
+}
+
+.try-canvas-el {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.try-page {
+  position: relative;
+}
+
+.try-page button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── 初始化状态：屏幕中间文案 + 两个按钮 ───────────────────────────────────── */
+.try-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(100vw * 24 / 720);
+  background: transparent;
+  pointer-events: none;
+}
+
+.try-intro-content {
+  width: calc(100vw * 448 / 720);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.try-intro-text {
+  margin: 0 0 calc(100vh * 48 / 1280);
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 32 / 1280);
+  font-weight: 500;
+  color: #2c2c2c;
+  text-align: left;
+  line-height: 1.4;
+  width: 100%;
+}
+
+.try-intro-text,
+.try-step1-text,
+.try-materials-step2-hint,
+.try-step3b-hint,
+.try-step3b-view-hint,
+.try-creation-name-text,
+.try-step4-text,
+.try-step5-text,
+.try-final-tutorial-text {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.try-intro-buttons {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  gap: calc(100vw * 16 / 720);
+}
+
+.try-intro-btn {
+  flex: 1;
+  padding: calc(100vh * 12 / 1280) calc(100vw * 12 / 720);
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 999px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #FF7F44;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.try-intro-btn:hover {
+  background: #fff5f2;
+}
+
+/* ── 教学第一步：左下角提示文案 + 弧形箭头指向 Materials ────────────────────── */
+.try-step1-hint {
+  position: fixed;
+  left: calc(100vw * 24 / 720);
+  bottom: calc(52px + 100vh * 48 / 1280 + 16px);
+  z-index: 50;
+  width: calc(100vw * 448 / 720);
+  padding-left: calc(100vh * 24 / 1280);
+  box-sizing: border-box;
+}
+
+.try-step1-text {
+  margin: 0 0 8px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.try-step1-arrow-wrap {
+  margin-left: 8px;
+}
+
+.try-step1-arrow {
+  width: 64px;
+  height: 96px;
+  display: block;
+}
+
+/* ── 教学第二步：文案在 Materials 弹窗上方（与 No problem 段落同字体）──────────── */
+.try-materials-wrap {
+  position: absolute;
+  left: calc(100vh * 24 / 1280);
+  bottom: 0;
+  width: 260px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* 让 panel 参与 wrap 高度计算 */
+.try-materials-wrap .materials-panel {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.try-materials-step2-hint {
+  flex-shrink: 0;
+  margin: 0 0 10px;
+  width: 100%;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* ── step3b：保存后线条保留，长按编辑提示 ───────────────────────────────────── */
+.try-step3b-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: calc(100vh * 80 / 1280);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.try-step3b-hint {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: center;
+  padding: 0 calc(100vw * 24 / 720);
+}
+
+.try-step3b-view-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(100vh * 16 / 1280);
+  transform: translateX(-50%);
+  z-index: 56;
+  width: calc(100vw * 448 / 720);
+  max-width: calc(100vw - 48px);
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* ── 第一条线动画结束后：祝贺文案 + Try again（在线条下方）────────────────── */
+.try-creation-name-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100vh * 40 / 1280);
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(100vh * 12 / 1280);
+}
+
+.try-creation-name-text {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.try-creation-name-longpress-hint {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+  max-width: calc(100vw * 429 / 720);
+}
+
+.try-creation-name-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(100vh * 8 / 1280);
+}
+
+.try-creation-name-input {
+  width: calc(100vw * 429 / 720);
+  height: calc(100vh * 76 / 1280);
+  padding: 0 calc(100vw * 16 / 720);
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 16px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 16 / 1280);
+  color: #2c2c2c;
+  box-sizing: border-box;
+}
+
+.try-creation-name-input::placeholder {
+  color: #999;
+}
+
+.try-creation-name-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: calc(100vw * 12 / 720);
+}
+
+.try-creation-name-start-over,
+.try-creation-name-save {
+  height: calc(100vh * 36 / 1280);
+  padding: 0 calc(100vw * 20 / 720);
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 999px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 400;
+  color: #FF7F44;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.try-creation-name-start-over:hover,
+.try-creation-name-save:hover {
+  background: #fff5f2;
+}
+
+/* ── 保存后 step4：右下角 My materials 上方文案 + 小箭头指向按钮 ───────────────── */
+.try-step4-hint {
+  position: fixed;
+  right: calc(100vw * 80 / 720);
+  bottom: calc(52px + 16px);
+  z-index: 50;
+  width: calc(100vw * 448 / 720);
+  max-width: calc(100vw - 100vw * 80 / 720 - 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.try-step4-text {
+  margin: 0 0 8px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+}
+
+.try-step4-arrow-wrap {
+  margin-left: calc(100vw * 200 / 720);
+}
+
+.try-step4-arrow {
+  width: 28px;
+  height: 48px;
+  display: block;
+}
+
+/* ── step5：My materials 弹框 + 上方提示文案（偏右、文字左对齐）───────────────────── */
+.try-step5-hint {
+  position: fixed;
+  right: calc(100vw * 24 / 720);
+  bottom: calc(52px + 16px + 200px);
+  /* 确保提示词可覆盖编辑弹窗 canvas 区域 */
+  z-index: 60;
+  width: 60vw;
+  max-width: calc(100vw - 100vw * 24 / 720 - 24px);
+  box-sizing: border-box;
+}
+
+.try-step5-text {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.try-my-materials-panel {
+  position: fixed;
+  right: calc(100vw * 24 / 720);
+  bottom: calc(52px + 48px);
+  z-index: 51;
+  width: 60vw;
+  max-width: calc(100vw - 100vw * 24 / 720 - 24px);
+  padding: calc(100vh * 16 / 1280) calc(100vw * 20 / 720);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+/* My materials 小弹窗右上角 dismiss：比其它弹窗更小、更靠里一点 */
+.try-my-materials-panel .materials-panel-dismiss {
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.try-my-materials-title {
+  margin: 0 0 calc(100vh * 12 / 1280);
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 20 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  text-transform: none;
+}
+
+.try-my-materials-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: calc(100vh * 12 / 1280);
+}
+
+.try-my-materials-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-my-materials-thumb-selected {
+  box-shadow: 0 0 0 2px #FF7F44;
+}
+
+.try-my-materials-thumb:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.try-my-materials-thumb-texture {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.try-my-materials-thumb-texture svg,
+.try-my-materials-thumb-texture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.try-my-materials-thumb-tint {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.try-my-materials-actions {
+  display: flex;
+  flex-direction: row;
+  gap: calc(100vw * 12 / 720);
+}
+
+.try-my-materials-btn {
+  flex: 1;
+  padding: calc(100vh * 10 / 1280) calc(100vw * 16 / 720);
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 999px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 400;
+  color: #FF7F44;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-my-materials-btn:hover {
+  background: #fff5f2;
+}
+
+/* ── Edit 弹窗：靠右、上方提示文案左对齐、弹窗下移、标题左、dismiss 右上、canvas 白底橙框、名称只读 #FFF3E7 ── */
+.try-edit-materials-wrap {
+  position: fixed;
+  right: calc(100vw * 24 / 720);
+  bottom: calc(52px + 24px + 10px);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.try-edit-materials-hint {
+  margin: 0 0 10px;
+  width: 260px;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.4;
+  text-align: left;
+  z-index: 61;
+  position: relative;
+  /* 用固定像素位移，确保在不同屏幕上都有明显效果 */
+  top: 0;
+  transform: translateY(28px);
+}
+
+.try-edit-materials-panel {
+  position: relative;
+  width: 260px;
+  padding: 4px 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+.try-edit-materials-panel-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+  min-height: 24px;
+}
+
+.try-edit-materials-dismiss {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #333;
+  font-size: 18px;
+  line-height: 24px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-edit-materials-dismiss:hover {
+  color: #000;
+}
+
+.try-edit-materials-dismiss:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.try-edit-line-preview {
+  width: 100%;
+  height: 80px;
+  margin-bottom: 0;
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.try-edit-materials-panel .try-edit-line-preview {
+  margin-bottom: 10px;
+}
+
+.try-edit-line-preview-inner {
+  width: 240px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.try-edit-name-row {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: #2c2c2c;
+  background: #FFF3E7;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.try-edit-name-row--stacked {
+  flex-wrap: wrap;
+}
+
+.try-edit-name-row--stacked .try-edit-name-input {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 100%;
+}
+
+.try-edit-name-row--stacked .try-edit-name-edit-btn {
+  margin-left: auto;
+}
+
+.try-edit-name-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.try-edit-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #2c2c2c;
+  background: #FFF3E7;
+  box-sizing: border-box;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  caret-color: #FF7F44;
+  vertical-align: top;
+  min-height: calc(1.45em + 8px);
+}
+
+.try-edit-name-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.try-edit-name-edit-btn {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 0.5px solid #FF7F44;
+  border-radius: 999px;
+  background: #fff;
+  color: #FF7F44;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-edit-name-edit-btn:hover {
+  background: #fff5f2;
+}
+
+.try-edit-name-save-btn {
+  background: #FF7F44;
+  color: #fff;
+  border-color: #FF7F44;
+}
+
+.try-edit-name-save-btn:hover {
+  background: #f06d33;
+  color: #fff;
+}
+
+.try-edit-name-save-btn:active {
+  background: #e0622a;
+  color: #fff;
+}
+
+.try-edit-materials-panel .materials-section {
+  margin-bottom: 4px;
+}
+
+.try-edit-materials-panel .material-edit-note-section {
+  margin-bottom: 6px;
+}
+
+.try-edit-materials-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.try-edit-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: #fff;
+  border: 0.5px solid #FF7F44;
+  border-radius: 999px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #FF7F44;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-edit-btn:hover {
+  background: #fff5f2;
+}
+
+/* ── Try->最后教程：全屏遮罩 ───────────────────────────────────────────────── */
+.try-final-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+  box-sizing: border-box;
+}
+
+.try-final-tutorial-content {
+  width: min(250px, 74vw);
+}
+
+.try-final-tutorial-text {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 24 / 1280);
+  font-weight: 400;
+  color: #fff;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.try-final-tutorial-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.try-final-tutorial-btn {
+  flex: 0 0 auto;
+  width: 48%;
+  padding: 10px 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  font-family: "Inter", sans-serif;
+  font-size: calc(100vh * 18 / 1280);
+  font-weight: 400;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.try-final-tutorial-btn-primary {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.try-final-tutorial-btn:active {
+  background: rgba(255, 255, 255, 0.18);
+}

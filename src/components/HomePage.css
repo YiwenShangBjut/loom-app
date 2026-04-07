@@ -1,0 +1,200 @@
+.home-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding: 0 calc((100vw - 100vw * 640 / 720) / 2);
+  background: #FFF3E7;
+}
+
+/* 标题区域：高度使第一个按钮 top 落在 50vh，标题贴底 */
+.home-title-area {
+  position: relative;
+  height: calc(50vh - 100vh * 100 / 1280);
+  display: flex;
+  align-items: flex-end;
+}
+
+.home-title {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-family: "Fuzzy Bubbles", "Noto Sans", sans-serif;
+  font-size: calc(100vh * 60 / 1280);
+  font-weight: 700;
+  color: #2c2c2c;
+  letter-spacing: 0;
+  line-height: 1.25;
+  max-width: 16em;
+}
+
+.home-title-deco {
+  position: absolute;
+  right: calc(100vw * -40 / 720);
+  top: calc(100% - 100vh * 300 / 1280);
+  width: calc(100vw * 240 / 720);
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 标题与第一个按钮的间距 100/1280 */
+.home-title-spacer {
+  height: calc(100vh * 100 / 1280);
+  flex-shrink: 0;
+}
+
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: calc(100vh * 24 / 1280);
+  flex-shrink: 0;
+}
+
+.home-card {
+  display: flex;
+  align-items: center;
+  width: calc(100vw * 640 / 720);
+  height: calc(100vh * 170 / 1280);
+  padding: 0 calc(100vw * 20 / 720);
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: "Noto Sans", sans-serif;
+  font-size: calc(100vh * 22 / 1280);
+  font-weight: 400;
+  color: #2c2c2c;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.home-card:hover {
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.home-card:active {
+  background: #f5f5f5;
+}
+
+.home-card-my-creation {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 201, 201, 0.4);
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 700;
+  font-size: calc(100vh * 36 / 1280);
+  align-items: flex-start;
+  padding-top: calc(100vh * 28 / 1280);
+  padding-left: calc(100vw * 40 / 720);
+}
+
+.home-card-create {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 153, 107, 0.2);
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 700;
+  font-size: calc(100vh * 36 / 1280);
+  align-items: flex-start;
+  padding-top: calc(100vh * 28 / 1280);
+  padding-left: calc(100vw * 40 / 720);
+}
+
+.home-card-create:hover {
+  background: rgba(255, 153, 107, 0.2);
+}
+
+.home-card-create:active {
+  background: rgba(255, 153, 107, 0.2);
+}
+
+.home-card-create-text {
+  position: relative;
+  z-index: 2;
+}
+
+.home-card-create-image {
+  position: absolute;
+  right: calc(100vw * 30 / 720);
+  bottom: calc(100vh * -8 / 1280);
+  height: calc(100vh * 170 / 1280);
+  width: auto;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-card-my-creation:hover {
+  background: rgba(255, 201, 201, 0.4);
+}
+
+.home-card-my-creation:active {
+  background: rgba(255, 201, 201, 0.4);
+}
+
+.home-card-my-creation-text {
+  position: relative;
+  z-index: 2;
+}
+
+.home-card-my-creation-image {
+  position: absolute;
+  right: calc(100vw * 12 / 720);
+  bottom: calc(100vh * 4 / 1280);
+  height: calc(100vh * 170 / 1280);
+  width: auto;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-card-community:link,
+.home-card-community:visited {
+  color: #2c2c2c;
+  text-decoration: none;
+}
+
+.home-card-community {
+  position: relative;
+  overflow: hidden;
+  background: rgba(201, 219, 255, 0.4);
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 700;
+  font-size: calc(100vh * 36 / 1280);
+  align-items: flex-start;
+  padding-top: calc(100vh * 28 / 1280);
+  padding-left: calc(100vw * 40 / 720);
+}
+
+.home-card-community:hover {
+  background: rgba(201, 219, 255, 0.4);
+}
+
+.home-card-community:active {
+  background: rgba(201, 219, 255, 0.4);
+}
+
+.home-card-community-text {
+  position: relative;
+  z-index: 2;
+}
+
+.home-card-community-image {
+  position: absolute;
+  right: calc(100vw * 8 / 720);
+  bottom: calc(100vh * 0 / 1280);
+  height: calc(100vh * 170 / 1280);
+  width: auto;
+  max-width: calc(100vw * 320 / 720);
+  object-fit: contain;
+  object-position: right bottom;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
