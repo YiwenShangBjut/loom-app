@@ -134,6 +134,141 @@ function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: 
   return Math.hypot(px - qx, py - qy);
 }
 
+/** Eraser brush diameter as a fraction of design width 1280px (56px circle). */
+const ERASER_DIAMETER_FRAC = 56 / 1280;
+
+type CanvasSeg = { ax: number; ay: number; bx: number; by: number };
+
+function segmentCircleBoundaryTs(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  ox: number,
+  oy: number,
+  r: number,
+): number[] {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const fx = ax - ox;
+  const fy = ay - oy;
+  const a = dx * dx + dy * dy;
+  if (a < 1e-14) return [];
+  const b = 2 * (fx * dx + fy * dy);
+  const c = fx * fx + fy * fy - r * r;
+  const disc = b * b - 4 * a * c;
+  if (disc < 0) return [];
+  const s = Math.sqrt(disc);
+  const t1 = (-b - s) / (2 * a);
+  const t2 = (-b + s) / (2 * a);
+  const out: number[] = [];
+  for (const t of [t1, t2]) {
+    if (t > 1e-5 && t < 1 - 1e-5) out.push(t);
+  }
+  return out.sort((u, v) => u - v);
+}
+
+function edgeOutsideFragments(ax: number, ay: number, bx: number, by: number, ox: number, oy: number, r: number): CanvasSeg[] {
+  let ts = [0, ...segmentCircleBoundaryTs(ax, ay, bx, by, ox, oy, r), 1];
+  const uniq: number[] = [];
+  for (const t of ts.sort((a, b) => a - b)) {
+    if (uniq.length === 0 || Math.abs(t - uniq[uniq.length - 1]!) > 1e-7) uniq.push(t);
+  }
+  ts = uniq;
+  const fr: CanvasSeg[] = [];
+  const r2 = r * r;
+  for (let k = 0; k < ts.length - 1; k++) {
+    const t0 = ts[k]!;
+    const t1 = ts[k + 1]!;
+    const mt = (t0 + t1) / 2;
+    const mx = ax + (bx - ax) * mt;
+    const my = ay + (by - ay) * mt;
+    const ddx = mx - ox;
+    const ddy = my - oy;
+    if (ddx * ddx + ddy * ddy <= r2) continue;
+    fr.push({
+      ax: ax + (bx - ax) * t0,
+      ay: ay + (by - ay) * t0,
+      bx: ax + (bx - ax) * t1,
+      by: ay + (by - ay) * t1,
+    });
+  }
+  return fr;
+}
+
+function mergeFragmentsToPolylines(frags: CanvasSeg[]): Point[][] {
+  if (frags.length === 0) return [];
+  const polys: Point[][] = [];
+  let current: Point[] = [
+    { x: frags[0]!.ax, y: frags[0]!.ay },
+    { x: frags[0]!.bx, y: frags[0]!.by },
+  ];
+  for (let i = 1; i < frags.length; i++) {
+    const f = frags[i]!;
+    const last = current[current.length - 1]!;
+    const first = { x: f.ax, y: f.ay };
+    if (Math.hypot(last.x - first.x, last.y - first.y) < 0.5) {
+      current.push({ x: f.bx, y: f.by });
+    } else {
+      if (current.length >= 2) polys.push(current);
+      current = [{ x: f.ax, y: f.ay }, { x: f.bx, y: f.by }];
+    }
+  }
+  if (current.length >= 2) polys.push(current);
+  return polys;
+}
+
+function clipFreehandCanvasPolyline(
+  pts: Array<{ x: number; y: number }>,
+  ox: number,
+  oy: number,
+  r: number,
+): Point[][] {
+  if (pts.length < 2) return [];
+  const allFrags: CanvasSeg[] = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const A = pts[i]!;
+    const B = pts[i + 1]!;
+    allFrags.push(...edgeOutsideFragments(A.x, A.y, B.x, B.y, ox, oy, r));
+  }
+  return mergeFragmentsToPolylines(allFrags);
+}
+
+function eraseFreehandThreadsWithCircle(
+  loom: { getCanvasCoords: (x: number, y: number) => Point; getContentCoords: (x: number, y: number) => Point },
+  wrap: WrapController,
+  isErasable: (threadIndex: number) => boolean,
+  canvasX: number,
+  canvasY: number,
+  radiusCanvas: number,
+): boolean {
+  let changed = false;
+  const n = wrap.getCommittedThreadCount();
+  for (let i = n - 1; i >= 0; i--) {
+    if (!isErasable(i)) continue;
+    const fh = wrap.getCommittedFreehandPoints(i);
+    if (!fh || fh.length < 2) continue;
+    const canvasPts = fh.map((p) => loom.getCanvasCoords(p.x, p.y));
+    const pieces = clipFreehandCanvasPolyline(canvasPts, canvasX, canvasY, radiusCanvas);
+    const contentPieces = pieces.map((poly) => poly.map((p) => loom.getContentCoords(p.x, p.y)));
+    if (contentPieces.length === 1 && contentPieces[0]!.length === fh.length) {
+      let same = true;
+      for (let k = 0; k < fh.length; k++) {
+        const a = contentPieces[0]![k]!;
+        const b = fh[k]!;
+        if (Math.hypot(a.x - b.x, a.y - b.y) > 1e-3) {
+          same = false;
+          break;
+        }
+      }
+      if (same) continue;
+    }
+    wrap.replaceErasableFreehandWithPolylines(i, contentPieces);
+    changed = true;
+  }
+  return changed;
+}
+
 /**
  * LoomCanvas wires: LoomRenderer, WrapController, ThreadSagManager, RopeRenderer.
  * Material (texture, thickness, color) comes from props and is applied when committing.
@@ -191,6 +326,7 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
   const canvasBackgroundRef = useRef(canvasBackground);
   const freehandEraserEnabledRef = useRef(freehandEraserEnabled);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
+  const eraserBrushRef = useRef<HTMLDivElement | null>(null);
   const lastSagStiffnessesRef = useRef<string | null>(null);
   const frameTickRef = useRef(0);
   const isIdleRef = useRef(false);
@@ -215,7 +351,17 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
   canvasBackgroundRef.current = canvasBackground;
   freehandEraserEnabledRef.current = freehandEraserEnabled;
 
-  const getRenderedThreadAtPoint = (contentX: number, contentY: number): number | null => {
+  /**
+   * Hit-test committed threads against rendered (sagged) geometry.
+   * @param allowLooseHit when true (default), fall back to a looser radius for long-press / fat-finger.
+   *   When false, only strict hits count — use so freehand is not blocked near gradient/thick strokes.
+   */
+  const getRenderedThreadAtPoint = (
+    contentX: number,
+    contentY: number,
+    opts?: { allowLooseHit?: boolean },
+  ): number | null => {
+    const allowLooseHit = opts?.allowLooseHit ?? true;
     const sag = sagRef.current;
     const wrap = wrapRef.current;
     const loom = loomRef.current;
@@ -280,7 +426,9 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
     }
 
     // When per-thread paths exist (sag or freehand), trust only that hit-test (matches what user sees).
-    if (hasAnySaggedPath) return bestStrictIndex ?? bestLooseIndex;
+    if (hasAnySaggedPath) {
+      return allowLooseHit ? (bestStrictIndex ?? bestLooseIndex) : bestStrictIndex;
+    }
     // Startup fallback before sag ropes are created.
     return wrap.getThreadAtPoint(contentX, contentY);
   };
@@ -724,7 +872,6 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       let freehandPointerId: number | null = null;
       let freehandPoints: Point[] = [];
       let eraserPointerId: number | null = null;
-      const erasedThreadIndices = new Set<number>();
       const pointersOnCanvas = new Set<number>();
 
       const isErasableFreehandThread = (threadIndex: number): boolean => {
@@ -736,15 +883,30 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
         return params.textureId === 'none' && params.color === FREEHAND_THIN_PEN_COLOR;
       };
 
-      const eraseAtContentPoint = (contentPoint: Point): boolean => {
+      const syncEraserBrushOverlay = (args: { clientX: number; clientY: number; active: boolean }) => {
+        const brush = eraserBrushRef.current;
+        const elContainer = containerRef.current;
+        if (!brush || !elContainer) return;
+        const w = elContainer.clientWidth;
+        const d = ERASER_DIAMETER_FRAC * w;
+        const rCss = d / 2;
+        const rect = elContainer.getBoundingClientRect();
+        if (!args.active || pointersOnCanvas.size > 1) {
+          brush.style.display = 'none';
+          return;
+        }
+        brush.style.display = 'block';
+        brush.style.width = `${d}px`;
+        brush.style.height = `${d}px`;
+        brush.style.left = `${args.clientX - rect.left - rCss}px`;
+        brush.style.top = `${args.clientY - rect.top - rCss}px`;
+      };
+
+      const eraseWithCircleAtClient = (clientX: number, clientY: number): boolean => {
         if (!wrap) return false;
-        const hit = getRenderedThreadAtPoint(contentPoint.x, contentPoint.y);
-        if (hit == null) return false;
-        if (erasedThreadIndices.has(hit)) return false;
-        if (!isErasableFreehandThread(hit)) return false;
-        wrap.deleteThread(hit);
-        erasedThreadIndices.add(hit);
-        return true;
+        const c = clientToCanvas(clientX, clientY);
+        const rad = (ERASER_DIAMETER_FRAC / 2) * canvasEl!.width;
+        return eraseFreehandThreadsWithCircle(loom, wrap, isErasableFreehandThread, c.x, c.y, rad);
       };
 
       const cancelFreehand = () => {
@@ -761,6 +923,7 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       };
 
       const cancelEraser = () => {
+        syncEraserBrushOverlay({ clientX: 0, clientY: 0, active: false });
         if (eraserPointerId != null && canvasEl) {
           try {
             canvasEl.releasePointerCapture(eraserPointerId);
@@ -768,8 +931,8 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
             // ignore
           }
         }
+        wrap?.endEraserGesture();
         eraserPointerId = null;
-        erasedThreadIndices.clear();
       };
 
       const cancelPanCandidate = () => {
@@ -831,6 +994,8 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
         if (isPinching) return;
         if (freehandPointerId != null) return;
         if (panCandidatePointerId == null || e.pointerId !== panCandidatePointerId) return;
+        // 触摸设备上平移仅通过双指手势（touchmove 里处理），避免单指与绕线/长按抢手势。
+        if (e.pointerType === 'touch') return;
 
         const curr = clientToCanvas(e.clientX, e.clientY);
 
@@ -940,9 +1105,8 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       const onPointerMoveEraser = (e: PointerEvent) => {
         if (eraserPointerId == null || e.pointerId !== eraserPointerId) return;
         if (isPinching) return;
-        const c = clientToCanvas(e.clientX, e.clientY);
-        const contentPt = loom.getContentCoords(c.x, c.y);
-        if (eraseAtContentPoint(contentPt)) e.preventDefault();
+        syncEraserBrushOverlay({ clientX: e.clientX, clientY: e.clientY, active: true });
+        if (eraseWithCircleAtClient(e.clientX, e.clientY)) e.preventDefault();
       };
 
       const onPointerEndFreehand = (e: PointerEvent) => {
@@ -970,8 +1134,9 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
         } catch {
           // ignore
         }
+        syncEraserBrushOverlay({ clientX: 0, clientY: 0, active: false });
+        wrap?.endEraserGesture();
         eraserPointerId = null;
-        erasedThreadIndices.clear();
       };
 
       canvasEl!.addEventListener('pointermove', onPointerMoveFreehand);
@@ -1014,14 +1179,15 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
               cancelPanCandidate();
               cancelFreehand();
               cancelEraser();
+              wrap!.beginEraserGesture();
               eraserPointerId = e.pointerId;
               canvasEl!.setPointerCapture(e.pointerId);
-              eraseAtContentPoint(pt);
+              syncEraserBrushOverlay({ clientX: e.clientX, clientY: e.clientY, active: true });
+              if (eraseWithCircleAtClient(e.clientX, e.clientY)) e.preventDefault();
               return;
             }
-            const threadHit = getRenderedThreadAtPoint(pt.x, pt.y);
-            // Start freehand only on empty space.
-            // If a thread is hit (including outside loom), keep long-press edit path available.
+            const threadHit = getRenderedThreadAtPoint(pt.x, pt.y, { allowLooseHit: false });
+            // Start freehand only on empty space (strict hit). Loose hits still go to long-press edit.
             if (threadHit == null) {
               if (e.pointerType === 'mouse' && e.button !== 0) return;
               cancelLongPressCandidate();
@@ -1108,6 +1274,8 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
 
       let pinchScale0 = 1;
       let pinchDist0 = 0;
+      /** 双指中点上一帧的 canvas 坐标；用于在缩放不变时仍能平移视图（zoomAt 同比例下不改变 pan）。 */
+      let lastPinchCenterCanvas: { x: number; y: number } | null = null;
       const touchDistance = (a: Touch, b: Touch) =>
         Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       // 让 pinch 缩放更“灵敏”：指数 > 1 会放大比值的变化量
@@ -1121,29 +1289,36 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
           cancelEraser();
           pinchDist0 = touchDistance(e.touches[0], e.touches[1]);
           pinchScale0 = loom.getZoomScale();
+          lastPinchCenterCanvas = null;
         }
       };
       const onTouchMove = (e: TouchEvent) => {
         if (e.touches.length === 2) {
           e.preventDefault();
-          const dist = touchDistance(e.touches[0], e.touches[1]);
-          // Only allow zooming out back to original size (scale=1), not smaller.
-          const ratio = pinchDist0 > 0 ? dist / pinchDist0 : 1;
-          const s = Math.max(1, Math.min(3, pinchScale0 * Math.pow(ratio, PINCH_SENSITIVITY_EXP)));
           const center = clientToCanvas(
             (e.touches[0].clientX + e.touches[1].clientX) / 2,
             (e.touches[0].clientY + e.touches[1].clientY) / 2
           );
+          if (lastPinchCenterCanvas != null) {
+            loom.panBy(center.x - lastPinchCenterCanvas.x, center.y - lastPinchCenterCanvas.y);
+          }
+          const dist = touchDistance(e.touches[0], e.touches[1]);
+          // Only allow zooming out back to original size (scale=1), not smaller.
+          const ratio = pinchDist0 > 0 ? dist / pinchDist0 : 1;
+          const s = Math.max(1, Math.min(3, pinchScale0 * Math.pow(ratio, PINCH_SENSITIVITY_EXP)));
           loom.zoomAt(center.x, center.y, s);
+          lastPinchCenterCanvas = center;
         }
       };
       const onTouchEnd = (e: TouchEvent) => {
         if (e.touches.length === 2) {
           pinchDist0 = touchDistance(e.touches[0], e.touches[1]);
           pinchScale0 = loom.getZoomScale();
+          lastPinchCenterCanvas = null;
         } else {
           // Pinch gesture ended (or was cancelled).
           isPinching = false;
+          lastPinchCenterCanvas = null;
           cancelPanCandidate();
           cancelLongPressCandidate();
         }
@@ -1329,8 +1504,30 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', minHeight: 0, overflow: 'hidden' }}
-    />
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        ref={eraserBrushRef}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          display: 'none',
+          pointerEvents: 'none',
+          borderRadius: '50%',
+          boxSizing: 'border-box',
+          boxShadow: '1px 2px 10px 8px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(0, 0, 0, 0.12)',
+          background: 'rgba(255, 255, 255, 0.12)',
+          zIndex: 2,
+        }}
+      />
+    </div>
   );
 });
 

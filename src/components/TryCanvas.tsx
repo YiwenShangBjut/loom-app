@@ -120,6 +120,8 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
     pointerId: number;
   } | null>(null);
   const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  /** panOnly 下用于区分触摸：松掉一指后不再用剩余单指恢复平移。 */
+  const touchPointerIdsRef = useRef<Set<number>>(new Set());
   const pinchStateRef = useRef<{
     startDistance: number;
     startScale: number;
@@ -248,6 +250,7 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
       content.scale.set(1, 1);
     }
     activePointersRef.current.clear();
+    touchPointerIdsRef.current.clear();
     pinchStateRef.current = null;
     panStateRef.current = null;
     scheduleRedraw();
@@ -390,6 +393,9 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
           const content = contentRef.current;
           if (!content) return;
           (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+          if (e.pointerType === 'touch') {
+            touchPointerIdsRef.current.add(e.pointerId);
+          }
           activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
           const pointers = Array.from(activePointersRef.current.values());
           if (pointers.length >= 2) {
@@ -409,7 +415,7 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
               worldCenterY: (centerLocalY - content.y) / startScale,
             };
             panStateRef.current = null;
-          } else {
+          } else if (e.pointerType !== 'touch') {
             panStateRef.current = {
               startClientX: e.clientX,
               startClientY: e.clientY,
@@ -417,6 +423,8 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
               startContentY: content.y,
               pointerId: e.pointerId,
             };
+          } else {
+            panStateRef.current = null;
           }
           return;
         }
@@ -494,6 +502,9 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
         if (!enabled) return;
         if (panOnly) {
           activePointersRef.current.delete(e.pointerId);
+          if (e.pointerType === 'touch') {
+            touchPointerIdsRef.current.delete(e.pointerId);
+          }
           const s = panStateRef.current;
           if (s && s.pointerId === e.pointerId) {
             panStateRef.current = null;
@@ -503,13 +514,15 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
           const content = contentRef.current;
           if (remaining.length === 1 && content) {
             const [pointerId, p] = remaining[0];
-            panStateRef.current = {
-              startClientX: p.x,
-              startClientY: p.y,
-              startContentX: content.x,
-              startContentY: content.y,
-              pointerId,
-            };
+            if (!touchPointerIdsRef.current.has(pointerId)) {
+              panStateRef.current = {
+                startClientX: p.x,
+                startClientY: p.y,
+                startContentX: content.x,
+                startContentY: content.y,
+                pointerId,
+              };
+            }
           }
           (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
           return;
@@ -524,6 +537,9 @@ const TryCanvasInner = forwardRef<TryCanvasHandle, TryCanvasProps>(function TryC
       onPointerCancel={(e) => {
         if (panOnly) {
           activePointersRef.current.delete(e.pointerId);
+          if (e.pointerType === 'touch') {
+            touchPointerIdsRef.current.delete(e.pointerId);
+          }
           pinchStateRef.current = null;
           const s = panStateRef.current;
           if (s && s.pointerId === e.pointerId) panStateRef.current = null;

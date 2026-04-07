@@ -112,7 +112,9 @@ type HistoryAction =
   /** Swapped `committed[lowerIndex]` with `committed[lowerIndex + 1]`. */
   | { type: 'reorder'; lowerIndex: number }
   /** Moved one thread from `fromIndex` to `toIndex` (indices before the move). */
-  | { type: 'reorderMove'; fromIndex: number; toIndex: number };
+  | { type: 'reorderMove'; fromIndex: number; toIndex: number }
+  /** Full committed-array snapshot before a batched freehand-eraser gesture. */
+  | { type: 'committedSnapshot'; snapshot: CommittedThread[] };
 
 interface ExpandResult {
   points:  Point[];
@@ -233,6 +235,11 @@ export class WrapController {
 
   /** How many times each anchor has been visited across all committed threads. */
   private visitCounts = new Map<number, number>();
+
+  /** When true, mutations skip undo/redo entries (freehand eraser batches one snapshot on gesture end). */
+  private historySuspended = false;
+  private eraserGestureSnapshot: CommittedThread[] | null = null;
+  private eraserGestureDirty = false;
 
   /** Live preview while drawing a freehand stroke (content space). */
   private freehandDraft: Point[] | null = null;
@@ -1018,6 +1025,108 @@ export class WrapController {
     this.notifyCommittedThreadsChange();
   }
 
+  private cloneOneCommitted(t: CommittedThread): CommittedThread {
+    return {
+      path: t.path.slice(),
+      freehandPoints: t.freehandPoints?.map((p) => ({ x: p.x, y: p.y })),
+      openTail: t.openTail ? { x: t.openTail.x, y: t.openTail.y } : undefined,
+      underIndices: t.underIndices.slice(),
+      textureId: t.textureId,
+      lineWidth: t.lineWidth,
+      color: t.color,
+      ...(t.gradientColor != null ? { gradientColor: t.gradientColor } : {}),
+      opacity: t.opacity,
+      stiffness: t.stiffness,
+      ...(typeof t.name === 'string' ? { name: t.name } : {}),
+    };
+  }
+
+  private cloneCommittedThreadsInternal(): CommittedThread[] {
+    return this.committed.map((t) => this.cloneOneCommitted(t));
+  }
+
+  private restoreCommittedFromSnapshotInternal(snapshot: CommittedThread[]): void {
+    this.committed = snapshot.map((t) => this.cloneOneCommitted(t));
+    this.visitCounts.clear();
+    for (const ct of this.committed) {
+      for (const a of ct.path) {
+        const c = this.visitCounts.get(a.id) ?? 0;
+        this.visitCounts.set(a.id, c + 1);
+      }
+    }
+    this.active = [];
+    this.preview = null;
+    this.isDragging = false;
+    this.lastSnapPos = null;
+    this.deferredSnapStart = null;
+    this.freehandDraft = null;
+  }
+
+  /**
+   * Start a freehand-eraser drag: mutations skip per-step undo until {@link endEraserGesture}.
+   */
+  beginEraserGesture(): void {
+    if (this.historySuspended) this.endEraserGesture();
+    this.eraserGestureSnapshot = this.cloneCommittedThreadsInternal();
+    this.historySuspended = true;
+    this.eraserGestureDirty = false;
+  }
+
+  /**
+   * End eraser drag; if anything changed, push one undo snapshot.
+   */
+  endEraserGesture(): void {
+    if (!this.historySuspended) return;
+    this.historySuspended = false;
+    if (this.eraserGestureDirty && this.eraserGestureSnapshot) {
+      this.undoStack.push({ type: 'committedSnapshot', snapshot: this.eraserGestureSnapshot });
+      this.redoStack = [];
+    }
+    this.eraserGestureSnapshot = null;
+    this.eraserGestureDirty = false;
+  }
+
+  /**
+   * Replace one committed freehand thread with one or more polylines (content space), or delete if empty.
+   * Used by canvas eraser while {@link beginEraserGesture} is active.
+   */
+  replaceErasableFreehandWithPolylines(index: number, polylines: Point[][]): void {
+    const t = this.committed[index];
+    if (!t?.freehandPoints || t.freehandPoints.length < 2) return;
+    const validPolys = polylines.filter((p) => p.length >= 2);
+    if (validPolys.length === 0) {
+      this.deleteThread(index);
+      return;
+    }
+    if (validPolys.length === 1) {
+      this.committed[index] = {
+        ...t,
+        path: [],
+        freehandPoints: validPolys[0]!.map((q) => ({ x: q.x, y: q.y })),
+      };
+    } else {
+      this.committed.splice(index, 1);
+      for (let j = 0; j < validPolys.length; j++) {
+        const poly = validPolys[j]!;
+        const nt: CommittedThread = {
+          path: [],
+          freehandPoints: poly.map((q) => ({ x: q.x, y: q.y })),
+          underIndices: [],
+          textureId: t.textureId,
+          lineWidth: t.lineWidth,
+          color: t.color,
+          ...(t.gradientColor != null ? { gradientColor: t.gradientColor } : {}),
+          opacity: t.opacity,
+          stiffness: t.stiffness,
+          ...(t.name ? { name: t.name } : {}),
+        };
+        this.committed.splice(index + j, 0, nt);
+      }
+    }
+    if (this.historySuspended) this.eraserGestureDirty = true;
+    this.notifyCommittedThreadsChange();
+  }
+
   /** Remove the last committed thread; used for undo. */
   undo(): void {
     const action = this.undoStack.pop();
@@ -1052,6 +1161,12 @@ export class WrapController {
         const [t] = this.committed.splice(toIndex, 1);
         this.committed.splice(fromIndex, 0, t);
       }
+    } else if (action.type === 'committedSnapshot') {
+      const cur = this.cloneCommittedThreadsInternal();
+      this.restoreCommittedFromSnapshotInternal(action.snapshot);
+      this.redoStack.push({ type: 'committedSnapshot', snapshot: cur });
+      this.notifyCommittedThreadsChange();
+      return;
     }
 
     this.redoStack.push(action);
@@ -1093,6 +1208,12 @@ export class WrapController {
         const [t] = this.committed.splice(fromIndex, 1);
         this.committed.splice(toIndex, 0, t);
       }
+    } else if (action.type === 'committedSnapshot') {
+      const cur = this.cloneCommittedThreadsInternal();
+      this.restoreCommittedFromSnapshotInternal(action.snapshot);
+      this.undoStack.push({ type: 'committedSnapshot', snapshot: cur });
+      this.notifyCommittedThreadsChange();
+      return;
     }
 
     this.undoStack.push(action);
@@ -1111,9 +1232,12 @@ export class WrapController {
       this.visitCounts.set(a.id, Math.max(0, c - 1));
     }
 
-    this.undoStack.push({ type: 'delete', thread: t, index });
-    // Deletion is a new operation, so redo history becomes invalid.
-    this.redoStack = [];
+    if (!this.historySuspended) {
+      this.undoStack.push({ type: 'delete', thread: t, index });
+      this.redoStack = [];
+    } else {
+      this.eraserGestureDirty = true;
+    }
 
     // Cancel any in-progress gesture to avoid mixing states.
     this.active = [];

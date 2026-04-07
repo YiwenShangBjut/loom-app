@@ -476,6 +476,8 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     startDistance: number;
     startScale: number;
   } | null>(null);
+  /** 双指中点（client 坐标），用于触摸平移 */
+  const detailImageTwoFingerMidRef = useRef<{ x: number; y: number } | null>(null);
   const storiesWrapRef = useRef<HTMLDivElement | null>(null);
   const storiesImageDragRef = useRef<{
     pointerId: number;
@@ -488,6 +490,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     startDistance: number;
     startScale: number;
   } | null>(null);
+  const storiesImageTwoFingerMidRef = useRef<{ x: number; y: number } | null>(null);
   const [detailImageOffset, setDetailImageOffset] = useState({ x: 0, y: DETAIL_IMAGE_DEFAULT_OFFSET_Y });
   const [detailImageScale, setDetailImageScale] = useState(1);
   const [detailImageDragging, setDetailImageDragging] = useState(false);
@@ -511,11 +514,13 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     setDetailImageScale(1);
     detailImageDragRef.current = null;
     detailImagePinchRef.current = null;
+    detailImageTwoFingerMidRef.current = null;
     setDetailImageDragging(false);
     setStoriesImageOffset({ x: 0, y: STORIES_IMAGE_DEFAULT_OFFSET_Y });
     setStoriesImageScale(1);
     storiesImageDragRef.current = null;
     storiesImagePinchRef.current = null;
+    storiesImageTwoFingerMidRef.current = null;
     setStoriesImageDragging(false);
     setBubbleOffsets({});
     setLiveFlatUrl(null);
@@ -671,6 +676,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
 
   const onDetailImagePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     detailImageDragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -713,6 +719,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     if (e.touches.length !== 2) return;
     const t0 = e.touches[0];
     const t1 = e.touches[1];
+    detailImageTwoFingerMidRef.current = null;
     detailImagePinchRef.current = {
       startDistance: Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY),
       startScale: detailImageScale,
@@ -726,17 +733,31 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     if (e.cancelable) e.preventDefault();
     const t0 = e.touches[0];
     const t1 = e.touches[1];
+    const midX = (t0.clientX + t1.clientX) / 2;
+    const midY = (t0.clientY + t1.clientY) / 2;
+    const prevMid = detailImageTwoFingerMidRef.current;
+    if (prevMid) {
+      setDetailImageOffset((o) => ({
+        x: o.x + (midX - prevMid.x),
+        y: o.y + (midY - prevMid.y),
+      }));
+    }
+    detailImageTwoFingerMidRef.current = { x: midX, y: midY };
     const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
     const nextScale = pinch.startScale * (dist / pinch.startDistance);
     setDetailImageScale(Math.max(DETAIL_IMAGE_MIN_SCALE, Math.min(DETAIL_IMAGE_MAX_SCALE, nextScale)));
   }, []);
 
   const onDetailImageTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length < 2) detailImagePinchRef.current = null;
+    if (e.touches.length < 2) {
+      detailImagePinchRef.current = null;
+      detailImageTwoFingerMidRef.current = null;
+    }
   }, []);
 
   const onStoriesImagePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     storiesImageDragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -779,6 +800,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     if (e.touches.length !== 2) return;
     const t0 = e.touches[0];
     const t1 = e.touches[1];
+    storiesImageTwoFingerMidRef.current = null;
     storiesImagePinchRef.current = {
       startDistance: Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY),
       startScale: storiesImageScale,
@@ -792,13 +814,26 @@ const CreationDetailView = memo(function CreationDetailView(props: {
     if (e.cancelable) e.preventDefault();
     const t0 = e.touches[0];
     const t1 = e.touches[1];
+    const midX = (t0.clientX + t1.clientX) / 2;
+    const midY = (t0.clientY + t1.clientY) / 2;
+    const prevMid = storiesImageTwoFingerMidRef.current;
+    if (prevMid) {
+      setStoriesImageOffset((o) => ({
+        x: o.x + (midX - prevMid.x),
+        y: o.y + (midY - prevMid.y),
+      }));
+    }
+    storiesImageTwoFingerMidRef.current = { x: midX, y: midY };
     const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
     const nextScale = pinch.startScale * (dist / pinch.startDistance);
     setStoriesImageScale(Math.max(DETAIL_IMAGE_MIN_SCALE, Math.min(DETAIL_IMAGE_MAX_SCALE, nextScale)));
   }, []);
 
   const onStoriesImageTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length < 2) storiesImagePinchRef.current = null;
+    if (e.touches.length < 2) {
+      storiesImagePinchRef.current = null;
+      storiesImageTwoFingerMidRef.current = null;
+    }
   }, []);
 
   const onBubblePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, bubbleIndex: number) => {

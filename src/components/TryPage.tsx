@@ -172,10 +172,10 @@ export function TryPage() {
     setShowFinalTutorialOverlay(false);
   }, [location.state]);
 
-  // Try 最后一步：仅在用户点击「Back to Home」或「Get Started」时记为完成教程（两者等价，仅跳转不同）。
-  const finalizeTryTutorialAndNavigate = useCallback((to: '/' | '/create') => {
+  // Try 最后一步：用户点击「Get Started」时记为完成教程并进入 create。
+  const finalizeTryTutorialAndNavigateToCreate = useCallback(() => {
     markTryTutorialCompletedForCurrentSubject();
-    navigate(to);
+    navigate('/create');
   }, [navigate]);
 
   // Step5：提示词需始终悬浮在 “My materials” 小弹窗上方，
@@ -510,15 +510,8 @@ export function TryPage() {
             <div className="try-final-tutorial-actions">
               <button
                 type="button"
-                className="try-final-tutorial-btn"
-                onClick={() => finalizeTryTutorialAndNavigate('/')}
-              >
-                Back to Home
-              </button>
-              <button
-                type="button"
                 className="try-final-tutorial-btn try-final-tutorial-btn-primary"
-                onClick={() => finalizeTryTutorialAndNavigate('/create')}
+                onClick={finalizeTryTutorialAndNavigateToCreate}
               >
                 Get Started
               </button>
