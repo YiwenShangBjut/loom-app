@@ -442,6 +442,7 @@ export function CreatePage() {
   /** 与画布已提交线条数同步，用于 Switch Loom 禁用态 */
   const [, setCommittedThreadCount] = useState(0);
   const [canvasBackgroundHex, setCanvasBackgroundHex] = useState(readStoredCanvasBackgroundHex);
+  const canvasBackgroundHexRef = useRef(canvasBackgroundHex);
   const [canvasBgPickerOpen, setCanvasBgPickerOpen] = useState(false);
   const [canvasBgPickerValue, setCanvasBgPickerValue] = useState<PickedColour>(() =>
     hexToPickedColour(readStoredCanvasBackgroundHex()),
@@ -449,6 +450,10 @@ export function CreatePage() {
   const canvasBgPickerValueRef = useRef(canvasBgPickerValue);
   canvasBgPickerValueRef.current = canvasBgPickerValue;
   const [recentColourSwatches, setRecentColourSwatches] = useState<ColourSwatchEntry[]>(readRecentColourSwatchesFromStorage);
+
+  useEffect(() => {
+    canvasBackgroundHexRef.current = canvasBackgroundHex;
+  }, [canvasBackgroundHex]);
 
   useEffect(() => {
     if (!blankCanvasThinPen) setFreehandEraserActive(false);
@@ -519,7 +524,7 @@ export function CreatePage() {
           thickness,
           opacity,
           softness,
-          canvasBackgroundHex,
+          canvasBackgroundHex: canvasBackgroundHexRef.current,
           loomShape: actualLoomShape,
         },
       });
@@ -568,6 +573,7 @@ export function CreatePage() {
   /** 用户改画布背景时写入草稿（不依赖是否新画了线）。 */
   const commitCanvasBackgroundHex = useCallback(
     (hex: string) => {
+      canvasBackgroundHexRef.current = hex;
       setCanvasBackgroundHex(hex);
       scheduleAutoSaveDraft();
     },
