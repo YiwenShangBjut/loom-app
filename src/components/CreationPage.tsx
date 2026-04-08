@@ -1057,11 +1057,18 @@ export function CreationPage() {
   const [dragging, setDragging] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [selectedCreation, setSelectedCreation] = useState<{ creation: SavedCreation; depth: number } | null>(null);
+  const detailScrollWrapRef = useRef<HTMLDivElement | null>(null);
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   const touchIdRef = useRef<number | null>(null);
   const justSwipeRef = useRef(false);
+  const [detailScrollTop, setDetailScrollTop] = useState(0);
+  const [detailViewportHeight, setDetailViewportHeight] = useState(1);
+  const [detailScrollHeight, setDetailScrollHeight] = useState(1);
+  const detailScrollbarDragRef = useRef<{ pointerId: number; startClientY: number; startScrollTop: number } | null>(
+    null,
+  );
 
   const creations = useMemo(
     () =>
@@ -1341,6 +1348,74 @@ export function CreationPage() {
     const top = visible[0];
     return top ? getCardMonthLabel(top) : '';
   }, [visible]);
+  const detailHasOverflow = selectedCreation != null && detailScrollHeight > detailViewportHeight + 1;
+  const detailMaxScroll = Math.max(0, detailScrollHeight - detailViewportHeight);
+  const detailThumbHeight = detailHasOverflow
+    ? Math.max(48, (detailViewportHeight / detailScrollHeight) * detailViewportHeight)
+    : 0;
+  const detailTrackTravel = Math.max(1, detailViewportHeight - detailThumbHeight);
+  const detailThumbTop = detailHasOverflow && detailMaxScroll > 0 ? (detailScrollTop / detailMaxScroll) * detailTrackTravel : 0;
+
+  useEffect(() => {
+    if (!selectedCreation) return;
+    const el = detailScrollWrapRef.current;
+    if (!el) return;
+    const updateMetrics = () => {
+      setDetailScrollTop(el.scrollTop);
+      setDetailViewportHeight(el.clientHeight || 1);
+      setDetailScrollHeight(el.scrollHeight || 1);
+    };
+    updateMetrics();
+    el.addEventListener('scroll', updateMetrics, { passive: true });
+    const ro = new ResizeObserver(updateMetrics);
+    ro.observe(el);
+    const firstChild = el.firstElementChild;
+    if (firstChild instanceof HTMLElement) ro.observe(firstChild);
+    window.addEventListener('resize', updateMetrics);
+    return () => {
+      el.removeEventListener('scroll', updateMetrics);
+      ro.disconnect();
+      window.removeEventListener('resize', updateMetrics);
+    };
+  }, [selectedCreation]);
+
+  const onDetailScrollbarThumbPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!detailHasOverflow) return;
+    detailScrollbarDragRef.current = {
+      pointerId: e.pointerId,
+      startClientY: e.clientY,
+      startScrollTop: detailScrollTop,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    e.preventDefault();
+  }, [detailHasOverflow, detailScrollTop]);
+
+  const onDetailScrollbarThumbPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = detailScrollbarDragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const el = detailScrollWrapRef.current;
+    if (!el || detailTrackTravel <= 0) return;
+    const deltaY = e.clientY - drag.startClientY;
+    const scrollDelta = (deltaY / detailTrackTravel) * Math.max(1, detailMaxScroll);
+    el.scrollTop = Math.max(0, Math.min(detailMaxScroll, drag.startScrollTop + scrollDelta));
+    e.preventDefault();
+  }, [detailMaxScroll, detailTrackTravel]);
+
+  const onDetailScrollbarThumbPointerEnd = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = detailScrollbarDragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    detailScrollbarDragRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
     <div className="create-page creation-page">
@@ -1360,6 +1435,7 @@ export function CreationPage() {
       </header>
 
       <div
+        ref={detailScrollWrapRef}
         className={`create-canvas-wrapper creation-canvas-wrapper${selectedCreation ? ' creation-canvas-wrapper--detail' : ''}`}
       >
         <main
@@ -1527,6 +1603,20 @@ export function CreationPage() {
             </div>
           )}
         </main>
+        {detailHasOverflow ? (
+          <div className="creation-detail-scrollbar" aria-hidden>
+            <button
+              type="button"
+              className="creation-detail-scrollbar-thumb"
+              style={{ height: `${detailThumbHeight}px`, transform: `translateY(${detailThumbTop}px)` }}
+              tabIndex={-1}
+              onPointerDown={onDetailScrollbarThumbPointerDown}
+              onPointerMove={onDetailScrollbarThumbPointerMove}
+              onPointerUp={onDetailScrollbarThumbPointerEnd}
+              onPointerCancel={onDetailScrollbarThumbPointerEnd}
+            />
+          </div>
+        ) : null}
       </div>
 
       {shareSheetOpen ? (
