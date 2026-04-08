@@ -329,6 +329,45 @@
   --stack-base-top: calc(100vh * 40 / 1280);
 }
 
+.creation-stack-controls {
+  width: 100%;
+  position: relative;
+}
+
+.creation-stack-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 70;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  color: rgba(44, 44, 44, 0.7);
+  font-size: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.72;
+}
+
+.creation-stack-nav:active {
+  background: rgba(255, 255, 255, 0.46);
+  opacity: 0.9;
+}
+
+.creation-stack-nav--left {
+  left: 8px;
+}
+
+.creation-stack-nav--right {
+  right: 8px;
+}
+
 .creation-stack-card {
   position: absolute;
   left: 0;

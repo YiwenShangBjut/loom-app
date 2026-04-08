@@ -1220,6 +1220,13 @@ export function CreationPage() {
     });
   }, []);
 
+  const rotateBackward = useCallback(() => {
+    setDeck((prev) => {
+      if (prev.length <= 1) return prev;
+      return [prev[prev.length - 1], ...prev.slice(0, prev.length - 1)];
+    });
+  }, []);
+
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     startXRef.current = e.clientX;
@@ -1403,98 +1410,116 @@ export function CreationPage() {
           ) : (
             <div className="creation-stack-wrap">
               <div className="creation-date">{topCardDateLabel}</div>
-              <div
-                className="creation-stack"
-                role="group"
-                aria-label="Creation card stack"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerEndLike}
-                onPointerCancel={onPointerEndLike}
-                onPointerLeave={onPointerEndLike}
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEndLike}
-                onTouchCancel={onTouchEndLike}
-              >
-                {visible.map((card, depth) => {
-                  const isTop = depth === 0;
-                  const style = isTop ? ({ ['--drag-x']: `${dragX}px` } as React.CSSProperties) : undefined;
+              <div className="creation-stack-controls">
+                <button
+                  type="button"
+                  className="creation-stack-nav creation-stack-nav--left"
+                  aria-label="Previous creation card"
+                  onClick={rotateBackward}
+                >
+                  &#8249;
+                </button>
+                <div
+                  className="creation-stack"
+                  role="group"
+                  aria-label="Creation card stack"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerEndLike}
+                  onPointerCancel={onPointerEndLike}
+                  onPointerLeave={onPointerEndLike}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEndLike}
+                  onTouchCancel={onTouchEndLike}
+                >
+                  {visible.map((card, depth) => {
+                    const isTop = depth === 0;
+                    const style = isTop ? ({ ['--drag-x']: `${dragX}px` } as React.CSSProperties) : undefined;
 
-                  return (
-                    <div
-                      key={card.id}
-                      className="creation-stack-card"
-                      data-depth={depth}
-                      data-dragging={isTop && dragging ? 'true' : 'false'}
-                      style={style}
-                    >
-                      {card.kind === 'creation' ? (
-                        <div
-                          className="creation-card-inner creation-card-inner--clickable"
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (justSwipeRef.current) {
-                              justSwipeRef.current = false;
-                              return;
-                            }
-                            setSelectedCreation({ creation: card.creation, depth });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
+                    return (
+                      <div
+                        key={card.id}
+                        className="creation-stack-card"
+                        data-depth={depth}
+                        data-dragging={isTop && dragging ? 'true' : 'false'}
+                        style={style}
+                      >
+                        {card.kind === 'creation' ? (
+                          <div
+                            className="creation-card-inner creation-card-inner--clickable"
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (justSwipeRef.current) {
+                                justSwipeRef.current = false;
+                                return;
+                              }
                               setSelectedCreation({ creation: card.creation, depth });
-                            }
-                          }}
-                        >
-                          <div className="creation-card-preview">
-                            <CreationPreview creation={card.creation} />
-                          </div>
-                          <div className="creation-card-meta">
-                            <div className="creation-card-title">
-                              {new Date(card.creation.savedAt).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedCreation({ creation: card.creation, depth });
+                              }
+                            }}
+                          >
+                            <div className="creation-card-preview">
+                              <CreationPreview creation={card.creation} />
                             </div>
-                            <div className="creation-card-subtitle">
-                              {card.creation.threads?.length ?? 0} lines
-                            </div>
-                          </div>
-                        </div>
-                      ) : card.kind === 'cta' ? (
-                        <div className="creation-card-inner">
-                          <div className="creation-card-preview">
-                            <div className="creation-card-preview-inner">
-                              <img className="creation-card-preview-img" src={card.previewSrc} alt="" />
+                            <div className="creation-card-meta">
+                              <div className="creation-card-title">
+                                {new Date(card.creation.savedAt).toLocaleDateString(undefined, {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </div>
+                              <div className="creation-card-subtitle">
+                                {card.creation.threads?.length ?? 0} lines
+                              </div>
                             </div>
                           </div>
-                          <div className="creation-card-meta">
-                            <div className="creation-card-title">{card.monthLabel}</div>
-                            {card.subtitle ? (
+                        ) : card.kind === 'cta' ? (
+                          <div className="creation-card-inner">
+                            <div className="creation-card-preview">
+                              <div className="creation-card-preview-inner">
+                                <img className="creation-card-preview-img" src={card.previewSrc} alt="" />
+                              </div>
+                            </div>
+                            <div className="creation-card-meta">
+                              <div className="creation-card-title">{card.monthLabel}</div>
+                              {card.subtitle ? (
+                                <div className="creation-card-subtitle">{card.subtitle}</div>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="creation-card-inner">
+                            <div className="creation-card-preview">
+                              <div className="creation-card-preview-inner">
+                                <img className="creation-card-preview-img" src={card.previewSrc} alt="" />
+                              </div>
+                            </div>
+                            <div className="creation-card-meta">
+                              <div className="creation-card-title">{card.monthLabel}</div>
                               <div className="creation-card-subtitle">{card.subtitle}</div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="creation-card-inner">
-                          <div className="creation-card-preview">
-                            <div className="creation-card-preview-inner">
-                              <img className="creation-card-preview-img" src={card.previewSrc} alt="" />
                             </div>
                           </div>
-                          <div className="creation-card-meta">
-                            <div className="creation-card-title">{card.monthLabel}</div>
-                            <div className="creation-card-subtitle">{card.subtitle}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="creation-stack-nav creation-stack-nav--right"
+                  aria-label="Next creation card"
+                  onClick={rotateForward}
+                >
+                  &#8250;
+                </button>
               </div>
               <button type="button" className="creation-try-gallery-btn" onClick={() => setGalleryView(true)}>
                 Try Gallery View
