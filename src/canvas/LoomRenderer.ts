@@ -106,6 +106,9 @@ function closestPointOnSegment(p: Point, a: Point, b: Point): Point {
 export class LoomRenderer {
   private _app: Application | null = null;
   private _ready = false;
+  /** Stage background layer so extract(stage) includes background color. */
+  private _bgGfx: Graphics | null = null;
+  private _bgColor: ColorSource = 0xffffff;
   /** Zoom + pan container; content is its child so pinch zoom affects both loom and ropes. */
   private _zoomContainer: Container | null = null;
   /** Single container for loom + ropes so both use the same coordinate system. */
@@ -189,6 +192,8 @@ export class LoomRenderer {
   /** Update the renderer clear / canvas background (Pixi BackgroundSystem). */
   setCanvasBackground(color: ColorSource): void {
     if (!this._app || !this._ready) return;
+    this._bgColor = color;
+    this._redrawBackground();
     this._app.renderer.background.color = color;
     // Ticker may be stopped (idle); still need one frame so the clear colour appears immediately.
     this._app.render();
@@ -266,6 +271,7 @@ export class LoomRenderer {
 
   async init(container: HTMLElement, options: LoomRendererOptions = {}): Promise<void> {
     const { background = 0xffffff } = options;
+    this._bgColor = background;
     const w = container.clientWidth  || window.innerWidth;
     const h = container.clientHeight || window.innerHeight;
 
@@ -282,12 +288,14 @@ export class LoomRenderer {
     if (!this._app) return; // destroyed mid-init
 
     this._ready = true;
+    this._bgGfx = new Graphics();
     this._zoomContainer = new Container();
     this._zoomContainer.pivot.set(0, 0);
     this._zoomContainer.position.set(0, 0);
     this._zoomContainer.scale.set(1);
     this._content = new Container();
     this._zoomContainer.addChild(this._content);
+    this._app.stage.addChild(this._bgGfx);
     this._app.stage.addChild(this._zoomContainer);
     container.appendChild(this._app.canvas);
     this._resizeView(container.clientWidth || w, container.clientHeight || h);
@@ -315,6 +323,13 @@ export class LoomRenderer {
     this._viewWidth = w;
     this._viewHeight = h;
     this._app.renderer.resize(w, h, 1);
+    this._redrawBackground();
+  }
+
+  private _redrawBackground(): void {
+    if (!this._bgGfx || this._viewWidth <= 0 || this._viewHeight <= 0) return;
+    this._bgGfx.clear();
+    this._bgGfx.rect(0, 0, this._viewWidth, this._viewHeight).fill(this._bgColor);
   }
 
   private drawLoom(): void {
@@ -519,6 +534,7 @@ export class LoomRenderer {
     this.resizeObserver = null;
     this._zoomContainer = null;
     this._content = null;
+    this._bgGfx = null;
     if (this._ready) {
       this._app?.destroy(true, { children: true });
     }

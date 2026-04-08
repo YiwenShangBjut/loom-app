@@ -142,6 +142,7 @@ const CreationExportedImage = memo(function CreationExportedImage(props: {
   const [pngUrl, setPngUrl] = useState<string | null>(() => cachedExport ?? null);
 
   const textureId: MaterialTextureId = creation.ui?.textureId ?? 'none';
+  const previewBackgroundHex = creation.ui?.canvasBackgroundHex ?? '#ffffff';
   const colorHex = creation.ui?.colorHex ?? tintToHex(MATERIAL_TEXTURE_PRESETS[textureId].color);
   const thickness = creation.ui?.thickness ?? 35;
   const opacity = creation.ui?.opacity ?? 100;
@@ -214,6 +215,8 @@ const CreationExportedImage = memo(function CreationExportedImage(props: {
                 full.height = outHeight;
                 const ctx = full.getContext('2d');
                 if (!ctx) return full;
+                ctx.fillStyle = previewBackgroundHex;
+                ctx.fillRect(0, 0, outWidth, outHeight);
                 ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, outWidth, outHeight);
                 return full;
               })()
@@ -294,6 +297,8 @@ const CreationExportedImage = memo(function CreationExportedImage(props: {
                 full.height = outHeight;
                 const ctx = full.getContext('2d');
                 if (!ctx) return full;
+                ctx.fillStyle = previewBackgroundHex;
+                ctx.fillRect(0, 0, outWidth, outHeight);
                 ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, outWidth, outHeight);
                 return full;
               })()
@@ -389,6 +394,7 @@ const CreationExportedImage = memo(function CreationExportedImage(props: {
           <LoomCanvas
             ref={loomRef}
             textureId={textureId}
+            canvasBackground={previewBackgroundHex}
             color={colorHex}
             thickness={thickness}
             opacity={opacity}

@@ -11,7 +11,7 @@ import './CreatePage.css';
 import './TryPage.css';
 import { saveBrush, deleteBrush, getSavedBrushes, updateBrush, type SavedBrush } from '../savedBrushes';
 import type { LoomShape } from '../physics/types';
-import { getLastCreation, saveLastCreation, startNewProject } from '../savedCreation';
+import { getLastCreation, saveLastCreation, startNewProject, type SavedCreation } from '../savedCreation';
 import { MemoryIndicator } from './MemoryIndicator';
 import { MaterialEditNameRow } from './MaterialEditNameRow';
 import { EditLinePreviewCanvas } from './EditLinePreviewCanvas';
@@ -506,15 +506,15 @@ export function CreatePage() {
 
   /** Persist current loom threads to localStorage (same payload as manual Save). */
   const persistCreatePageDraft = useCallback(
-    (allowEmpty: boolean): boolean => {
+    (allowEmpty: boolean): SavedCreation | null => {
       const loom = loomRef.current;
-      if (!loom) return false;
+      if (!loom) return null;
       const actualLoomShape = loom.getLoomShape();
 
       const { threads, threadNames } = buildThreadPayloadFromLoom(loom);
-      if (threads.length === 0 && !allowEmpty) return false;
+      if (threads.length === 0 && !allowEmpty) return null;
 
-      saveLastCreation({
+      return saveLastCreation({
         threads,
         threadNames,
         ui: {
@@ -528,7 +528,6 @@ export function CreatePage() {
           loomShape: actualLoomShape,
         },
       });
-      return true;
     },
     [
       selectedTexture,
@@ -544,12 +543,12 @@ export function CreatePage() {
   const autoSaveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const suppressNextCommittedAutoSaveRef = useRef(false);
 
-  const flushAutoSaveDraft = useCallback(() => {
+  const flushAutoSaveDraft = useCallback((): SavedCreation | null => {
     if (autoSaveDebounceRef.current) {
       clearTimeout(autoSaveDebounceRef.current);
       autoSaveDebounceRef.current = null;
     }
-    persistCreatePageDraft(true);
+    return persistCreatePageDraft(true);
   }, [persistCreatePageDraft]);
 
   const scheduleAutoSaveDraft = useCallback(() => {
@@ -610,10 +609,9 @@ export function CreatePage() {
   useEffect(() => {
     if (leaveCreateBlocker.state !== 'blocked') return;
 
-    flushAutoSaveDraft();
-    const stored = getLastCreation();
-    if (stored?.threads?.length) {
-      queueCreationExportForCache(stored);
+    const saved = flushAutoSaveDraft();
+    if (saved?.threads?.length) {
+      queueCreationExportForCache(saved);
     }
 
     queueMicrotask(() => {

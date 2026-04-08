@@ -298,6 +298,108 @@ export async function buildCreationCachedExportDataUrls(
   const flatCreation = filterSavedCreationForDetailFlat(creation);
   const settleFrames = 48;
 
+  const withSolidBackground = (src: HTMLCanvasElement): HTMLCanvasElement => {
+    const out = document.createElement('canvas');
+    out.width = src.width;
+    out.height = src.height;
+    const ctx = out.getContext('2d');
+    if (!ctx) return src;
+    ctx.fillStyle = exportBackground;
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, 0, 0);
+    return out;
+  };
+
+  const parseHexRgb = (hex: string): { r: number; g: number; b: number } => {
+    const s = hex.replace(/^#/, '');
+    if (s.length !== 6) return { r: 255, g: 255, b: 255 };
+    return {
+      r: parseInt(s.slice(0, 2), 16),
+      g: parseInt(s.slice(2, 4), 16),
+      b: parseInt(s.slice(4, 6), 16),
+    };
+  };
+
+  /**
+   * Replace only edge-connected near-white pixels with the chosen background color.
+   * This avoids depending on Pixi clear-color behavior while preserving interior highlights.
+   */
+  const recolorEdgeConnectedWhiteBackground = (
+    src: HTMLCanvasElement,
+    backgroundHex: string,
+  ): HTMLCanvasElement => {
+    const out = document.createElement('canvas');
+    out.width = src.width;
+    out.height = src.height;
+    const ctx = out.getContext('2d');
+    if (!ctx) return withSolidBackground(src);
+    ctx.drawImage(src, 0, 0);
+
+    const w = out.width;
+    const h = out.height;
+    if (w <= 0 || h <= 0) return out;
+    const img = ctx.getImageData(0, 0, w, h);
+    const data = img.data;
+    const { r: br, g: bg, b: bb } = parseHexRgb(backgroundHex);
+
+    const isNearWhite = (idx: number): boolean => {
+      const a = data[idx + 3];
+      if (a < 240) return false;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      return r >= 248 && g >= 248 && b >= 248;
+    };
+
+    const mark = new Uint8Array(w * h);
+    const qx = new Int32Array(w * h);
+    const qy = new Int32Array(w * h);
+    let head = 0;
+    let tail = 0;
+
+    const pushIfWhite = (x: number, y: number) => {
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+      const p = y * w + x;
+      if (mark[p]) return;
+      const i = p * 4;
+      if (!isNearWhite(i)) return;
+      mark[p] = 1;
+      qx[tail] = x;
+      qy[tail] = y;
+      tail += 1;
+    };
+
+    for (let x = 0; x < w; x++) {
+      pushIfWhite(x, 0);
+      pushIfWhite(x, h - 1);
+    }
+    for (let y = 1; y < h - 1; y++) {
+      pushIfWhite(0, y);
+      pushIfWhite(w - 1, y);
+    }
+
+    while (head < tail) {
+      const x = qx[head]!;
+      const y = qy[head]!;
+      head += 1;
+      pushIfWhite(x + 1, y);
+      pushIfWhite(x - 1, y);
+      pushIfWhite(x, y + 1);
+      pushIfWhite(x, y - 1);
+    }
+
+    for (let p = 0; p < mark.length; p++) {
+      if (!mark[p]) continue;
+      const i = p * 4;
+      data[i] = br;
+      data[i + 1] = bg;
+      data[i + 2] = bb;
+      data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return out;
+  };
+
   async function snapshotAfterLoad(c: SavedCreation): Promise<HTMLCanvasElement | null> {
     loom.resetExportView();
     const ok = loom.tryLoadCreation(c);
@@ -305,7 +407,9 @@ export async function buildCreationCachedExportDataUrls(
     loom.resetExportView();
     loom.wakeExportTicker();
     for (let i = 0; i < settleFrames; i++) await nextExportFrame();
-    return loom.getExportSnapshotCanvas();
+    const snapshot = loom.getExportSnapshotCanvas();
+    if (!snapshot) return null;
+    return recolorEdgeConnectedWhiteBackground(snapshot, exportBackground);
   }
 
   try {
