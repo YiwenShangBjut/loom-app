@@ -1212,18 +1212,20 @@ export function CreationPage() {
   }, []);
 
   const handleEditCreation = useCallback((creation: SavedCreation) => {
-    startNewProject();
-    saveLastCreation({
-      displayName: creation.displayName,
-      threads: creation.threads,
-      threadNames: creation.threadNames,
-      ui: creation.ui,
-      cachedCardPreviewPngDataUrl: creation.cachedCardPreviewPngDataUrl,
-      cachedDetailFlatPngDataUrl: creation.cachedDetailFlatPngDataUrl,
-      cachedDetailBubblesPngDataUrl: creation.cachedDetailBubblesPngDataUrl,
-      cardPreviewLayoutVersion: creation.cardPreviewLayoutVersion,
-    });
-    navigate('/create');
+    try {
+      startNewProject();
+      saveLastCreation({
+        displayName: creation.displayName,
+        threads: creation.threads,
+        threadNames: creation.threadNames,
+        ui: creation.ui,
+      });
+    } catch (err) {
+      // Keep edit flow usable even if localStorage write fails (e.g. quota exceeded).
+      console.warn('[CreationPage] Failed to prepare edit draft from saved creation.', err);
+    } finally {
+      navigate('/create');
+    }
   }, [navigate]);
 
   const rotateForward = useCallback(() => {
