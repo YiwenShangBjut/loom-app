@@ -304,6 +304,7 @@ type ThreadPersistRow = {
   polyline?: Array<{ x: number; y: number }>;
   openTail?: { x: number; y: number };
   openTailNorm?: { x: number; y: number };
+  openTailLoomNorm?: { x: number; y: number };
   textureId: MaterialTextureId;
   lineWidth: number;
   color: number;
@@ -318,6 +319,7 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
 } {
   const existing = getSavedBrushes();
   const viewport = loom.getContentViewportSize();
+  const loomMetrics = loom.getLoomPersistenceMetrics();
   const threads: ThreadPersistRow[] = [];
   const threadNames: string[] = [];
 
@@ -352,6 +354,14 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
               },
             }
           : {}),
+        ...(ot && loomMetrics
+          ? {
+              openTailLoomNorm: {
+                x: (ot.x - loomMetrics.center.x) / loomMetrics.rimRadius,
+                y: (ot.y - loomMetrics.center.y) / loomMetrics.rimRadius,
+              },
+            }
+          : {}),
         textureId: params.textureId,
         lineWidth: params.lineWidth,
         color: params.color,
@@ -370,6 +380,14 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
               openTailNorm: {
                 x: ot.x / viewport.width,
                 y: ot.y / viewport.height,
+              },
+            }
+          : {}),
+        ...(loomMetrics
+          ? {
+              openTailLoomNorm: {
+                x: (ot.x - loomMetrics.center.x) / loomMetrics.rimRadius,
+                y: (ot.y - loomMetrics.center.y) / loomMetrics.rimRadius,
               },
             }
           : {}),

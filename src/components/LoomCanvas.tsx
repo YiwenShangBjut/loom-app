@@ -29,6 +29,8 @@ export interface LoomCanvasHandle {
   getThreadOpenTail(index: number): Point | null;
   /** Current loom content viewport size (same coordinate space as persisted points). */
   getContentViewportSize(): { width: number; height: number } | null;
+  /** Loom center/radius in content space for stable coordinate normalization. */
+  getLoomPersistenceMetrics(): { center: Point; rimRadius: number } | null;
   setThreadMaterial(index: number, params: Partial<ThreadParams>): void;
   getThreadName(index: number): string | undefined;
   setThreadName(index: number, name: string): void;
@@ -517,11 +519,28 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
       return { width: w, height: h };
     },
+    getLoomPersistenceMetrics() {
+      const loom = loomRef.current;
+      if (!loom) return null;
+      const center = loom.getLoomCenterContent();
+      const rimRadius = loom.getLoomInnerRadiusContent();
+      if (
+        !Number.isFinite(center.x) ||
+        !Number.isFinite(center.y) ||
+        !Number.isFinite(rimRadius) ||
+        rimRadius <= 0
+      ) {
+        return null;
+      }
+      return { center, rimRadius };
+    },
     tryLoadCreation(creation: SavedCreation) {
       if (!wrapRef.current || !sagRef.current) return false;
       const loom = loomRef.current;
       const viewW = loom?.app.renderer.width ?? 0;
       const viewH = loom?.app.renderer.height ?? 0;
+      const center = loom?.getLoomCenterContent();
+      const rimRadius = loom?.getLoomInnerRadiusContent() ?? 0;
       const threads = creation?.threads;
       if (!Array.isArray(threads)) return false;
       isIdleRef.current = false;
@@ -537,7 +556,16 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
               ? t.polyline.map((p) => ({ x: p.x, y: p.y }))
               : undefined,
           openTail:
-            t.openTailNorm != null &&
+            t.openTailLoomNorm != null &&
+            typeof t.openTailLoomNorm.x === 'number' &&
+            typeof t.openTailLoomNorm.y === 'number' &&
+            center != null &&
+            rimRadius > 0
+              ? {
+                  x: center.x + t.openTailLoomNorm.x * rimRadius,
+                  y: center.y + t.openTailLoomNorm.y * rimRadius,
+                }
+              : t.openTailNorm != null &&
             typeof t.openTailNorm.x === 'number' &&
             typeof t.openTailNorm.y === 'number' &&
             viewW > 0 &&

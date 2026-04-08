@@ -205,6 +205,11 @@ export class LoomRenderer {
     return { x: this._viewWidth / 2, y: this._viewHeight * LOOM_CENTER_Y_FRAC };
   }
 
+  /** Loom inner radius in content space (circle radius / triangle circumradius). */
+  getLoomInnerRadiusContent(): number {
+    return this._loomInnerR;
+  }
+
   /**
    * Zoom so that the point at (canvasX, canvasY) stays under the cursor/finger.
    * @param canvasX Canvas-space X of the zoom anchor (cursor/finger)

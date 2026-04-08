@@ -22,6 +22,11 @@ export interface SavedCreationThread {
    * Prefer this on restore so open tails stay aligned after canvas resize.
    */
   openTailNorm?: { x: number; y: number };
+  /**
+   * Loom-local normalized free end: ((x-cx)/rimR, (y-cy)/rimR).
+   * More stable than viewport normalization when aspect ratio changes.
+   */
+  openTailLoomNorm?: { x: number; y: number };
   textureId: MaterialTextureId;
   lineWidth: number;
   /** Pixi tint number (0xRRGGBB). */
