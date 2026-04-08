@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation, useNavigate, type BlockerFunction } from 'react-router-dom';
+import { queueCreationExportForCache } from './CreationExportWorker';
 import { LoomCanvas, type LoomCanvasHandle } from './LoomCanvas';
 import { TextureSwatchIcon } from './TextureSwatchIcons';
 import { ColourWheelPicker, type PickedColour } from './ColourWheelPicker';
@@ -9,11 +10,8 @@ import { commitStiffness } from '../rendering/commitStiffness';
 import './CreatePage.css';
 import './TryPage.css';
 import { saveBrush, deleteBrush, getSavedBrushes, updateBrush, type SavedBrush } from '../savedBrushes';
-import { buildCreationCachedExportDataUrls } from '../creationCachedExport';
-import { nextExportFrame } from '../creationExportCompose';
 import type { LoomShape } from '../physics/types';
-import type { SavedCreation } from '../savedCreation';
-import { getLastCreation, patchCurrentProjectExportCaches, saveLastCreation, startNewProject } from '../savedCreation';
+import { getLastCreation, saveLastCreation, startNewProject } from '../savedCreation';
 import { MemoryIndicator } from './MemoryIndicator';
 import { MaterialEditNameRow } from './MaterialEditNameRow';
 import { EditLinePreviewCanvas } from './EditLinePreviewCanvas';
@@ -419,18 +417,6 @@ export function CreatePage() {
 
   const loomRef = useRef<LoomCanvasHandle>(null);
   const createCanvasHostRef = useRef<HTMLElement | null>(null);
-  const leaveExportGenerationRef = useRef<symbol | null>(null);
-  const leaveBlockerProceedRef = useRef<(() => void) | null>(null);
-  const exportUiRef = useRef({
-    textureId: 'none' as MaterialTextureId,
-    colorHex: DEFAULT_LINE_COLOUR,
-    gradientColorHex: undefined as string | undefined,
-    thickness: 35,
-    opacity: 100,
-    softness: (1 - (MATERIAL_TEXTURE_PRESETS.none?.stiffness ?? 0.6)) * 100,
-    canvasBackgroundHex: DEFAULT_CANVAS_BACKGROUND,
-    loomShape: 'circle' as LoomShape,
-  });
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [selectedTexture, setSelectedTexture] = useState<MaterialTextureId>('none');
   const [selectedColour, setSelectedColour] = useState<PickedColour>({
@@ -478,17 +464,6 @@ export function CreatePage() {
     () => (1 - (MATERIAL_TEXTURE_PRESETS.none?.stiffness ?? 0.6)) * 100,
   );
 
-  exportUiRef.current = {
-    textureId: selectedTexture,
-    colorHex: selectedColour.hex,
-    gradientColorHex: normalizeGradientHex(selectedColour.hex, selectedGradientColour.hex),
-    thickness,
-    opacity,
-    softness,
-    canvasBackgroundHex,
-    loomShape: createLoomShape,
-  };
-
   const leaveCreateBlocker = useBlocker(
     useCallback<BlockerFunction>(
       ({ currentLocation, nextLocation }) =>
@@ -496,8 +471,6 @@ export function CreatePage() {
       [],
     ),
   );
-  leaveBlockerProceedRef.current = () => leaveCreateBlocker.proceed?.();
-
   // Restore last Create canvas state so re-opening `/create` shows
   // the previously saved threads.
   useEffect(() => {
@@ -626,71 +599,20 @@ export function CreatePage() {
     };
   }, [flushAutoSaveDraft]);
 
-  // Leaving Create: flush draft, export 无气泡卡片/详情顶图 + 有气泡 Stories 图。
+  // Leaving Create: flush draft, then unblock navigation immediately. PNG cache export runs on a
+  // persistent off-screen LoomCanvas (see CreationExportWorker) so the visible canvas is not reloaded.
   useEffect(() => {
     if (leaveCreateBlocker.state !== 'blocked') return;
 
-    const myGen = Symbol('leave-create-export');
-    leaveExportGenerationRef.current = myGen;
+    flushAutoSaveDraft();
+    const stored = getLastCreation();
+    if (stored?.threads?.length) {
+      queueCreationExportForCache(stored);
+    }
 
-    void (async () => {
-      try {
-        flushAutoSaveDraft();
-        const loom = loomRef.current;
-        const host = createCanvasHostRef.current;
-        if (!loom || !host) return;
-
-        const { threads, threadNames } = buildThreadPayloadFromLoom(loom);
-        if (threads.length === 0) return;
-
-        const prev = getLastCreation();
-        const ui = exportUiRef.current;
-        const actualLoomShape = loom.getLoomShape();
-        const creation: SavedCreation = {
-          version: 1,
-          savedAt: prev?.savedAt ?? Date.now(),
-          threads,
-          threadNames,
-          ui: {
-            textureId: ui.textureId,
-            colorHex: ui.colorHex,
-            gradientColorHex: ui.gradientColorHex,
-            thickness: ui.thickness,
-            opacity: ui.opacity,
-            softness: ui.softness,
-            canvasBackgroundHex: ui.canvasBackgroundHex,
-            loomShape: actualLoomShape,
-          },
-        };
-
-        let canvas = host.querySelector('canvas') as HTMLCanvasElement | null;
-        for (let i = 0; i < 40 && canvas && (canvas.width === 0 || canvas.height === 0); i += 1) {
-          await nextExportFrame();
-          canvas = host.querySelector('canvas') as HTMLCanvasElement | null;
-        }
-
-        const urls = await buildCreationCachedExportDataUrls(loom, creation);
-        if (!urls) return;
-        patchCurrentProjectExportCaches({
-          cachedCardPreviewPngDataUrl: urls.cardPreview,
-          cachedDetailFlatPngDataUrl: urls.detailFlat,
-          cachedDetailBubblesPngDataUrl: urls.detailBubbles,
-        });
-      } catch {
-        // ignore export failures (quota, GPU, etc.)
-      } finally {
-        if (leaveExportGenerationRef.current === myGen) {
-          leaveExportGenerationRef.current = null;
-          leaveBlockerProceedRef.current?.();
-        }
-      }
-    })();
-
-    return () => {
-      if (leaveExportGenerationRef.current === myGen) {
-        leaveExportGenerationRef.current = null;
-      }
-    };
+    queueMicrotask(() => {
+      leaveCreateBlocker.proceed?.();
+    });
   }, [leaveCreateBlocker.state, flushAutoSaveDraft]);
 
   // My materials（用户自定义材质库）

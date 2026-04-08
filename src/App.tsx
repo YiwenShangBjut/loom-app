@@ -1,4 +1,5 @@
 import { createHashRouter, RouterProvider } from 'react-router-dom';
+import { CreationExportWorker } from './components/CreationExportWorker';
 import { CreatePage } from './components/CreatePage';
 import { CreationPage } from './components/CreationPage';
 import { TryPage } from './components/TryPage';
@@ -17,5 +18,10 @@ const router = createHashRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <CreationExportWorker />
+    </>
+  );
 }

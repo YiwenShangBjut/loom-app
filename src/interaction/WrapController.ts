@@ -217,6 +217,7 @@ export class WrapController {
   private lastSnapPos: Point | null      = null;
   /** Active pointers on canvas; multi-touch should zoom/pan only, never draw. */
   private activePointerIds = new Set<number>();
+  private wrapDragPointerId: number | null = null;
 
   /** When user presses on a committed thread near an anchor, we defer wrap to allow long-press edit. */
   private deferredSnapStart: {
@@ -387,6 +388,36 @@ export class WrapController {
   }
 
   /**
+   * Pointer may lift outside the canvas (modal/overlay) so {@link handleUp} never runs.
+   * Always remove the id from {@link activePointerIds} (stale ids force the multi-pointer branch and break wrap).
+   * If a wrap drag was active and the up did not end on the canvas, discard the partial wrap — otherwise
+   * {@link handleUp} will commit.
+   */
+  onGlobalPointerEnd(pointerId: number, pointerUpEndedOnCanvas: boolean): void {
+    this.activePointerIds.delete(pointerId);
+    if (this.deferredSnapStart?.pointerId === pointerId) {
+      this.deferredSnapStart = null;
+    }
+
+    if (pointerUpEndedOnCanvas) {
+      return;
+    }
+
+    if (this.isDragging && this.wrapDragPointerId === pointerId) {
+      this.isDragging = false;
+      this.preview = null;
+      this.active = [];
+      this.lastSnapPos = null;
+      this.wrapDragPointerId = null;
+      try {
+        this.canvas.releasePointerCapture(pointerId);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /**
    * Swap anchor graph (e.g. circle ↔ triangle) while threads are empty.
    * Caller must pass anchors from {@link LoomRenderer.getAnchorPoints} after {@link LoomRenderer.setLoomShape}.
    */
@@ -406,6 +437,8 @@ export class WrapController {
     this.isDragging = false;
     this.lastSnapPos = null;
     this.deferredSnapStart = null;
+    this.wrapDragPointerId = null;
+    this.activePointerIds.clear();
   }
 
   /** Call after anchor coordinates change in place (e.g. window resize). */
@@ -603,6 +636,7 @@ export class WrapController {
       this.preview = null;
       this.lastSnapPos = null;
       this.deferredSnapStart = null;
+      this.wrapDragPointerId = null;
       this.onPointerDownNoSnap?.(pt, e);
       return;
     }
@@ -642,6 +676,7 @@ export class WrapController {
     this.active      = [snap];
     this.preview     = { x: snap.x, y: snap.y };
     this.lastSnapPos = snap;
+    this.wrapDragPointerId = e.pointerId;
     this.canvas.setPointerCapture(e.pointerId);
   }
 
@@ -653,6 +688,7 @@ export class WrapController {
       this.preview = null;
       this.lastSnapPos = null;
       this.deferredSnapStart = null;
+      this.wrapDragPointerId = null;
       return;
     }
     if (!this.isDragging) {
@@ -673,6 +709,7 @@ export class WrapController {
           this.active = [def.snap];
           this.preview = { x: def.snap.x, y: def.snap.y };
           this.lastSnapPos = def.snap;
+          this.wrapDragPointerId = e.pointerId;
           this.canvas.setPointerCapture(e.pointerId);
           // Fall through to normal move handling with current pt
         } else {
@@ -743,6 +780,7 @@ export class WrapController {
     }
     this.active      = [];
     this.lastSnapPos = null;
+    this.wrapDragPointerId = null;
   }
 
   // ── Over / under stamping ─────────────────────────────────────────────────
@@ -1021,6 +1059,8 @@ export class WrapController {
     this.lastSnapPos = null;
     this.deferredSnapStart = null;
     this.freehandDraft = null;
+    this.wrapDragPointerId = null;
+    this.activePointerIds.clear();
     this.visitCounts.clear();
     this.notifyCommittedThreadsChange();
   }
@@ -1060,6 +1100,8 @@ export class WrapController {
     this.lastSnapPos = null;
     this.deferredSnapStart = null;
     this.freehandDraft = null;
+    this.wrapDragPointerId = null;
+    this.activePointerIds.clear();
   }
 
   /**
@@ -1244,6 +1286,7 @@ export class WrapController {
     this.preview = null;
     this.isDragging = false;
     this.lastSnapPos = null;
+    this.wrapDragPointerId = null;
     this.notifyCommittedThreadsChange();
   }
 

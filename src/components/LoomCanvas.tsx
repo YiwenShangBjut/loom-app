@@ -55,6 +55,8 @@ export interface LoomCanvasHandle {
   wakeExportTicker(): void;
   /** 导出前重置到默认视图（zoom=1, pan=0），避免裁切偏移。 */
   resetExportView(): void;
+  /** Pixi 画布清除色 #rrggbb（离屏导出 worker 等与 UI 画布分离时使用）。 */
+  setCanvasBackgroundHex(hex: string): void;
   /** My Creation 预览：圆心 + (rim 半径+content buffer) 映射到画布后的正方形半边长（px） */
   getLoomPreviewSquareCanvasParams(): { cx: number; cy: number; halfSidePx: number } | null;
   getLoomShape(): LoomShape;
@@ -704,6 +706,10 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
     resetExportView() {
       loomRef.current?.resetViewTransform();
     },
+    setCanvasBackgroundHex(hex: string) {
+      canvasBackgroundRef.current = hex;
+      loomRef.current?.setCanvasBackground(hex);
+    },
     getLoomPreviewSquareCanvasParams() {
       const loom = loomRef.current;
       if (!loom) return null;
@@ -733,6 +739,7 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
     let running = true;
     let removePinchListeners: (() => void) | null = null;
     let removePanListeners: (() => void) | null = null;
+    let removeDocumentPointerGestureFlush: (() => void) | null = null;
     let canvasEl: HTMLCanvasElement | null = null;
     let onContextMenu: ((e: MouseEvent) => void) | null = null;
     let onDblClick: ((e: MouseEvent) => void) | null = null;
@@ -1146,6 +1153,85 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       canvasEl!.addEventListener('pointerup', onPointerEndEraser);
       canvasEl!.addEventListener('pointercancel', onPointerEndEraser);
 
+      /**
+       * After a long-press opens the edit UI, capture is released before pointerup; the user may
+       * lift on a panel above the canvas. That pointerup never hits the canvas, so
+       * pointersOnCanvas / suppressNextPointerUpForId / in-progress gestures could stick and
+       * block the next draw or long-press (e.g. pointersOnCanvas.size > 1).
+       */
+      const onDocumentPointerEndCapture = (e: PointerEvent) => {
+        const pid = e.pointerId;
+        pointersOnCanvas.delete(pid);
+
+        const rawTarget = e.target;
+        const endedOnCanvas =
+          !!canvasEl &&
+          rawTarget != null &&
+          typeof Node !== 'undefined' &&
+          rawTarget instanceof Node &&
+          canvasEl.contains(rawTarget);
+        wrap?.onGlobalPointerEnd(pid, endedOnCanvas);
+
+        if (suppressNextPointerUpForId === pid) {
+          suppressNextPointerUpForId = null;
+          e.preventDefault();
+          return;
+        }
+
+        if (freehandPointerId === pid) {
+          try {
+            canvasEl!.releasePointerCapture(pid);
+          } catch {
+            // ignore
+          }
+          freehandPointerId = null;
+          const pts = freehandPoints;
+          freehandPoints = [];
+          wrap?.setFreehandDraft(null);
+          if (pts.length >= 2) wrap?.commitFreehandStroke(pts);
+          else if (pts.length === 1) onTapCanvasRef.current?.(pts[0]);
+          return;
+        }
+
+        if (eraserPointerId === pid) {
+          try {
+            canvasEl!.releasePointerCapture(pid);
+          } catch {
+            // ignore
+          }
+          syncEraserBrushOverlay({ clientX: 0, clientY: 0, active: false });
+          wrap?.endEraserGesture();
+          eraserPointerId = null;
+          return;
+        }
+
+        if (panCandidatePointerId === pid) {
+          if (freehandPointerId != null) return;
+          const contentPoint = panCandidateContentPoint;
+          const wasPanning = panActive;
+          cancelPanCandidate();
+          if (!wasPanning && contentPoint) onTapCanvasRef.current?.(contentPoint);
+          return;
+        }
+
+        if (longPressCandidatePointerId === pid) {
+          const timerPending = longPressTimer != null;
+          const contentPoint = longPressCandidateContentPoint;
+          cancelLongPressCandidate();
+          if (timerPending && contentPoint) {
+            const threadIndex = getRenderedThreadAtPoint(contentPoint.x, contentPoint.y);
+            if (threadIndex == null) onTapCanvasRef.current?.(contentPoint);
+          }
+        }
+      };
+
+      document.addEventListener('pointerup', onDocumentPointerEndCapture, true);
+      document.addEventListener('pointercancel', onDocumentPointerEndCapture, true);
+      removeDocumentPointerGestureFlush = () => {
+        document.removeEventListener('pointerup', onDocumentPointerEndCapture, true);
+        document.removeEventListener('pointercancel', onDocumentPointerEndCapture, true);
+      };
+
       removePanListeners = () => {
         canvasEl!.removeEventListener('pointerdown', onCanvasPointerDownCapture, { capture: true });
         canvasEl!.removeEventListener('pointerup', onCanvasPointerUpCapture, { capture: true });
@@ -1451,6 +1537,7 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
       sagRef.current = null;
       if (removePinchListeners) removePinchListeners();
       if (removePanListeners) removePanListeners();
+      if (removeDocumentPointerGestureFlush) removeDocumentPointerGestureFlush();
       if (canvasEl) {
         canvasEl.removeEventListener('contextmenu', onContextMenu!);
         canvasEl.removeEventListener('pointerdown', onPointerDown);
