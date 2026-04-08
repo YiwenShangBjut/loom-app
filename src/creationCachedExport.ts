@@ -94,6 +94,7 @@ export function cropCanvasToLoomCenterSquare(
   outH: number,
   offsetXFrac = 0,
   offsetYFrac = 0,
+  background = '#ffffff',
 ): HTMLCanvasElement {
   const sw = srcCanvas.width;
   const sh = srcCanvas.height;
@@ -106,7 +107,7 @@ export function cropCanvasToLoomCenterSquare(
   slice.width = d;
   slice.height = d;
   const ctx = slice.getContext('2d');
-  if (!ctx) return letterboxCanvasToFit(srcCanvas, outW, outH);
+  if (!ctx) return letterboxCanvasToFit(srcCanvas, outW, outH, background);
 
   const srcLeft = Math.max(0, Math.floor(x0));
   const srcTop = Math.max(0, Math.floor(y0));
@@ -120,7 +121,7 @@ export function cropCanvasToLoomCenterSquare(
     ctx.drawImage(srcCanvas, srcLeft, srcTop, srcW, srcH, dstX, dstY, srcW, srcH);
   }
 
-  return letterboxCanvasToFit(slice, outW, outH);
+  return letterboxCanvasToFit(slice, outW, outH, background);
 }
 
 /** Fallback: crop a centered square region from source canvas, then letterbox. */
@@ -130,10 +131,11 @@ export function cropCanvasCenterSquare(
   outH: number,
   offsetXFrac = 0,
   offsetYFrac = 0,
+  background = '#ffffff',
 ): HTMLCanvasElement {
   const sw = srcCanvas.width;
   const sh = srcCanvas.height;
-  if (sw <= 0 || sh <= 0) return letterboxCanvasToFit(srcCanvas, outW, outH);
+  if (sw <= 0 || sh <= 0) return letterboxCanvasToFit(srcCanvas, outW, outH, background);
   const d = Math.max(2, Math.min(sw, sh));
   const x0 = Math.floor((sw - d) / 2 + offsetXFrac * d);
   const y0 = Math.floor((sh - d) / 2 + offsetYFrac * d);
@@ -141,9 +143,9 @@ export function cropCanvasCenterSquare(
   slice.width = d;
   slice.height = d;
   const ctx = slice.getContext('2d');
-  if (!ctx) return letterboxCanvasToFit(srcCanvas, outW, outH);
+  if (!ctx) return letterboxCanvasToFit(srcCanvas, outW, outH, background);
   ctx.drawImage(srcCanvas, x0, y0, d, d, 0, 0, d, d);
-  return letterboxCanvasToFit(slice, outW, outH);
+  return letterboxCanvasToFit(slice, outW, outH, background);
 }
 
 /**
@@ -155,6 +157,7 @@ export function cropToContent(
   outW: number,
   outH: number,
   focusYBias = 0.5,
+  background = '#ffffff',
 ): HTMLCanvasElement {
   const sw = srcCanvas.width;
   const sh = srcCanvas.height;
@@ -165,6 +168,8 @@ export function cropToContent(
     out.height = outH;
     const ctx = out.getContext('2d');
     if (!ctx) return out;
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, outW, outH);
     ctx.drawImage(srcCanvas, 0, 0, sw, sh, 0, 0, outW, outH);
     return out;
   };
@@ -247,7 +252,7 @@ export function cropToContent(
     if (!sctx) return fallback();
     sctx.drawImage(srcCanvas, ex0, ey0, cw, ch, 0, 0, cw, ch);
 
-    return letterboxCanvasToFit(slice, outW, outH);
+    return letterboxCanvasToFit(slice, outW, outH, background);
   } catch {
     return fallback();
   }
@@ -288,6 +293,7 @@ export async function buildCreationCachedExportDataUrls(
   loom: LoomCanvasHandle,
   creation: SavedCreation,
 ): Promise<{ cardPreview: string; detailFlat: string; detailBubbles: string } | null> {
+  const exportBackground = creation.ui?.canvasBackgroundHex ?? '#ffffff';
   const cardCreation = filterSavedCreationForCardPreview(creation);
   const flatCreation = filterSavedCreationForDetailFlat(creation);
   const settleFrames = 48;
@@ -317,6 +323,7 @@ export async function buildCreationCachedExportDataUrls(
           CREATION_CARD_PREVIEW_H,
           CARD_PREVIEW_SCOPE_OFFSET_X_FRAC,
           CARD_PREVIEW_SCOPE_OFFSET_Y_FRAC,
+          exportBackground,
         )
       : cropCanvasCenterSquare(
           canvasCard,
@@ -324,11 +331,13 @@ export async function buildCreationCachedExportDataUrls(
           CREATION_CARD_PREVIEW_H,
           CARD_PREVIEW_SCOPE_OFFSET_X_FRAC,
           CARD_PREVIEW_SCOPE_OFFSET_Y_FRAC,
+          exportBackground,
         );
     const cardSized = letterboxCanvasToFit(
       croppedCard,
       CREATION_CARD_STACK_DISPLAY_W,
       CREATION_CARD_STACK_DISPLAY_H,
+      exportBackground,
     );
     const cardPreview = cardSized.toDataURL('image/png', 0.92);
 
@@ -337,6 +346,7 @@ export async function buildCreationCachedExportDataUrls(
       CREATION_DETAIL_EXPORT_PX,
       CREATION_DETAIL_EXPORT_PX,
       0.5,
+      exportBackground,
     ).toDataURL('image/png', 0.92);
 
     const composed = composeCanvasWithStoryBubbles(canvasFull, loom, creation);
@@ -345,6 +355,7 @@ export async function buildCreationCachedExportDataUrls(
       CREATION_DETAIL_EXPORT_PX,
       CREATION_DETAIL_EXPORT_PX,
       0.5,
+      exportBackground,
     ).toDataURL('image/png', 0.92);
 
     return { cardPreview, detailFlat, detailBubbles };

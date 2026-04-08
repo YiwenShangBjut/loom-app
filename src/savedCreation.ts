@@ -76,6 +76,7 @@ const CURRENT_PROJECT_ID_STORAGE_KEY = 'loom-saved-creation-current-project-id-v
 
 // Legacy (pre-history) key: keep for migration.
 const LEGACY_LAST_STORAGE_KEY = 'loom-saved-creation-last';
+export const SAVED_CREATIONS_UPDATED_EVENT = 'loom-saved-creations-updated';
 
 const createProjectId = () => `p-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -111,6 +112,11 @@ function readHistoryEntries(): SavedCreationEntry[] {
 
 function writeHistoryEntries(entries: SavedCreationEntry[]): void {
   localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
+}
+
+function notifySavedCreationsUpdated(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(SAVED_CREATIONS_UPDATED_EVENT));
 }
 
 function getOrInitCurrentProjectId(): string {
@@ -182,11 +188,13 @@ export function saveLastCreation(creation: Omit<SavedCreation, 'version' | 'save
   if (history.length > 0 && history[history.length - 1].projectId === projectId) {
     history[history.length - 1] = { projectId, creation: withMeta };
     writeHistoryEntries(history);
+    notifySavedCreationsUpdated();
     return withMeta;
   }
 
   history.push({ projectId, creation: withMeta });
   writeHistoryEntries(history);
+  notifySavedCreationsUpdated();
   return withMeta;
 }
 
@@ -216,6 +224,7 @@ export function patchCurrentProjectExportCaches(urls: {
         cardPreviewLayoutVersion: undefined,
       };
       writeHistoryEntries(history);
+      notifySavedCreationsUpdated();
       return;
     }
 
@@ -227,6 +236,7 @@ export function patchCurrentProjectExportCaches(urls: {
       cardPreviewLayoutVersion: CARD_PREVIEW_LAYOUT_VERSION,
     };
     writeHistoryEntries(history);
+    notifySavedCreationsUpdated();
   } catch {
     // e.g. quota exceeded
   }
@@ -285,6 +295,7 @@ export function updateSavedCreationDisplayName(savedAt: number, displayName: str
     });
     if (!updated) return null;
     writeHistoryEntries(next);
+    notifySavedCreationsUpdated();
     return migrateLegacyExportPreviewFields(updated);
   } catch {
     return null;

@@ -19,6 +19,7 @@ import {
 import {
   CARD_PREVIEW_LAYOUT_VERSION,
   getSavedCreationsForAdmin,
+  SAVED_CREATIONS_UPDATED_EVENT,
   saveLastCreation,
   startNewProject,
   updateSavedCreationDisplayName,
@@ -448,6 +449,33 @@ type DeckCard =
 const MAX_VISIBLE = 4;
 const SWIPE_THRESHOLD_PX = 50;
 
+function buildDeckFromSavedCreations(saved: SavedCreation[]): DeckCard[] {
+  const n = saved.length;
+  return [
+    ...saved.map((creation, index): DeckCard => ({
+      kind: 'creation',
+      id: `creation-${creation.savedAt}-${index}`,
+      creation,
+    })),
+    {
+      kind: 'guide',
+      id: 'creation-guide',
+      title: 'Swipe the cards',
+      subtitle: 'Your latest work stays on top. Swiping rotates the stack.',
+      monthLabel: 'Feb 2026',
+      previewSrc: placeholderFeb2026,
+    },
+    {
+      kind: 'cta',
+      id: 'creation-cta',
+      title: n > 0 ? 'Start a new project' : 'Create your first project',
+      subtitle: '',
+      monthLabel: 'Jan 2026',
+      previewSrc: placeholderJan2026,
+    },
+  ];
+}
+
 function getCardMonthLabel(card: DeckCard): string {
   if (card.kind === 'creation') {
     return new Date(card.creation.savedAt).toLocaleString('en-US', { month: 'short', year: 'numeric' });
@@ -561,6 +589,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
   const storiesBgUrl =
     creation.cachedDetailBubblesPngDataUrl ?? liveFlatUrl ?? creation.cachedDetailFlatPngDataUrl ?? null;
   const showDomStoryBubbles = !creation.cachedDetailBubblesPngDataUrl && storiesBubbles.length > 0;
+  const detailBackgroundHex = creation.ui?.canvasBackgroundHex ?? '#ffffff';
 
   const buildDetailExportWithBubbles = useCallback(async (): Promise<string | null> => {
     if (!flatDisplayUrl) return null;
@@ -875,7 +904,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
       <div className="creation-detail-date">{dateLabel}</div>
       <div
         className={`creation-detail-canvas-wrap creation-detail-canvas-wrap--draggable${detailImageDragging ? ' is-dragging' : ''}`}
-        style={{ width: DETAIL_CANVAS_WIDTH }}
+        style={{ width: DETAIL_CANVAS_WIDTH, background: detailBackgroundHex }}
         onPointerDown={onDetailImagePointerDown}
         onPointerMove={onDetailImagePointerMove}
         onPointerUp={onDetailImagePointerEndLike}
@@ -913,6 +942,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
           <div
             className="creation-detail-static-img creation-export-loading"
             style={{
+              background: detailBackgroundHex,
               transform: `translate(${detailImageOffset.x}px, ${detailImageOffset.y}px) scale(${detailImageScale})`,
               transformOrigin: 'center center',
               transition: detailImageDragging ? 'none' : 'transform 120ms ease-out',
@@ -940,7 +970,7 @@ const CreationDetailView = memo(function CreationDetailView(props: {
       <div
         className={`creation-detail-stories-wrap creation-detail-canvas-wrap--draggable${storiesImageDragging ? ' is-dragging' : ''}`}
         ref={storiesWrapRef}
-        style={{ width: DETAIL_CANVAS_WIDTH }}
+        style={{ width: DETAIL_CANVAS_WIDTH, background: detailBackgroundHex }}
         onPointerDown={onStoriesImagePointerDown}
         onPointerMove={onStoriesImagePointerMove}
         onPointerUp={onStoriesImagePointerEndLike}
@@ -1019,30 +1049,7 @@ export function CreationPage() {
 
   const [deck, setDeck] = useState<DeckCard[]>(() => {
     const saved = getSavedCreationsForAdmin().slice().sort((a, b) => b.savedAt - a.savedAt);
-    const n = saved.length;
-    return [
-      ...saved.map((creation, index): DeckCard => ({
-        kind: 'creation',
-        id: `creation-${creation.savedAt}-${index}`,
-        creation,
-      })),
-      {
-        kind: 'guide',
-        id: 'creation-guide',
-        title: 'Swipe the cards',
-        subtitle: 'Your latest work stays on top. Swiping rotates the stack.',
-        monthLabel: 'Feb 2026',
-        previewSrc: placeholderFeb2026,
-      },
-      {
-        kind: 'cta',
-        id: 'creation-cta',
-        title: n > 0 ? 'Start a new project' : 'Create your first project',
-        subtitle: '',
-        monthLabel: 'Jan 2026',
-        previewSrc: placeholderJan2026,
-      },
-    ];
+    return buildDeckFromSavedCreations(saved);
   });
 
   const [galleryView, setGalleryView] = useState(false);
@@ -1056,8 +1063,11 @@ export function CreationPage() {
   const justSwipeRef = useRef(false);
 
   const creations = useMemo(
-    () => getSavedCreationsForAdmin().slice().sort((a, b) => b.savedAt - a.savedAt),
-    [],
+    () =>
+      deck
+        .filter((card): card is Extract<DeckCard, { kind: 'creation' }> => card.kind === 'creation')
+        .map((card) => card.creation),
+    [deck],
   );
   const galleryItems = useMemo(
     () =>
@@ -1075,6 +1085,20 @@ export function CreationPage() {
   }, []);
 
   const shareBlurb = 'My menstrual art from Loom — explore yours.';
+
+  useEffect(() => {
+    const refreshFromStorage = () => {
+      const saved = getSavedCreationsForAdmin().slice().sort((a, b) => b.savedAt - a.savedAt);
+      setDeck(buildDeckFromSavedCreations(saved));
+      setSelectedCreation((prev) => {
+        if (!prev) return prev;
+        const next = saved.find((c) => c.savedAt === prev.creation.savedAt);
+        return next ? { ...prev, creation: next } : null;
+      });
+    };
+    window.addEventListener(SAVED_CREATIONS_UPDATED_EVENT, refreshFromStorage);
+    return () => window.removeEventListener(SAVED_CREATIONS_UPDATED_EVENT, refreshFromStorage);
+  }, []);
 
   useEffect(() => {
     if (!shareSheetOpen) return;
@@ -1200,7 +1224,11 @@ export function CreationPage() {
     startXRef.current = e.clientX;
     startYRef.current = e.clientY;
     pointerIdRef.current = e.pointerId;
-    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    try {
+      (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Some mobile browsers may throw here; keep swipe interaction working.
+    }
     setDragging(true);
     setDragX(0);
   }, []);
