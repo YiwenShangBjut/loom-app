@@ -1060,6 +1060,7 @@ export function CreationPage() {
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
   const pointerIdRef = useRef<number | null>(null);
+  const touchIdRef = useRef<number | null>(null);
   const justSwipeRef = useRef(false);
 
   const creations = useMemo(
@@ -1275,6 +1276,59 @@ export function CreationPage() {
     [rotateForward],
   );
 
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchIdRef.current = touch.identifier;
+    startXRef.current = touch.clientX;
+    startYRef.current = touch.clientY;
+    setDragging(true);
+    setDragX(0);
+  }, []);
+
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (!dragging) return;
+      if (touchIdRef.current == null || startXRef.current == null || startYRef.current == null) return;
+      const touch = Array.from(e.touches).find((t) => t.identifier === touchIdRef.current);
+      if (!touch) return;
+
+      const dx = touch.clientX - startXRef.current;
+      const dy = touch.clientY - startYRef.current;
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+        setDragX(0);
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      setDragX(dx);
+    },
+    [dragging],
+  );
+
+  const onTouchEndLike = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (touchIdRef.current == null || startXRef.current == null || startYRef.current == null) return;
+      const touch = Array.from(e.changedTouches).find((t) => t.identifier === touchIdRef.current);
+      if (!touch) return;
+
+      const dx = touch.clientX - startXRef.current;
+      const dy = touch.clientY - startYRef.current;
+      const horizontalEnough = Math.abs(dx) >= Math.abs(dy) * 1.2;
+      const swipe = horizontalEnough && Math.abs(dx) >= SWIPE_THRESHOLD_PX;
+      if (swipe) {
+        justSwipeRef.current = true;
+        rotateForward();
+      }
+
+      touchIdRef.current = null;
+      startXRef.current = null;
+      startYRef.current = null;
+      setDragging(false);
+      setDragX(0);
+    },
+    [rotateForward],
+  );
+
   const visible = useMemo(() => deck.slice(0, MAX_VISIBLE), [deck]);
   const topCardDateLabel = useMemo(() => {
     const top = visible[0];
@@ -1358,6 +1412,10 @@ export function CreationPage() {
                 onPointerUp={onPointerEndLike}
                 onPointerCancel={onPointerEndLike}
                 onPointerLeave={onPointerEndLike}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEndLike}
+                onTouchCancel={onTouchEndLike}
               >
                 {visible.map((card, depth) => {
                   const isTop = depth === 0;
