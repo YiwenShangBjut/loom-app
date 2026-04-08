@@ -303,6 +303,7 @@ type ThreadPersistRow = {
   anchorIds: number[];
   polyline?: Array<{ x: number; y: number }>;
   openTail?: { x: number; y: number };
+  openTailNorm?: { x: number; y: number };
   textureId: MaterialTextureId;
   lineWidth: number;
   color: number;
@@ -316,6 +317,7 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
   threadNames: string[];
 } {
   const existing = getSavedBrushes();
+  const viewport = loom.getContentViewportSize();
   const threads: ThreadPersistRow[] = [];
   const threadNames: string[] = [];
 
@@ -342,6 +344,14 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
       threads.push({
         anchorIds,
         ...(ot ? { openTail: { x: ot.x, y: ot.y } } : {}),
+        ...(ot && viewport
+          ? {
+              openTailNorm: {
+                x: ot.x / viewport.width,
+                y: ot.y / viewport.height,
+              },
+            }
+          : {}),
         textureId: params.textureId,
         lineWidth: params.lineWidth,
         color: params.color,
@@ -355,6 +365,14 @@ function buildThreadPayloadFromLoom(loom: LoomCanvasHandle): {
       threads.push({
         anchorIds,
         openTail: { x: ot.x, y: ot.y },
+        ...(viewport
+          ? {
+              openTailNorm: {
+                x: ot.x / viewport.width,
+                y: ot.y / viewport.height,
+              },
+            }
+          : {}),
         textureId: params.textureId,
         lineWidth: params.lineWidth,
         color: params.color,

@@ -27,6 +27,8 @@ export interface LoomCanvasHandle {
   getThreadFreehandPolyline(index: number): Point[] | null;
   /** Open end in content space after last anchor (weave tail into blank area). */
   getThreadOpenTail(index: number): Point | null;
+  /** Current loom content viewport size (same coordinate space as persisted points). */
+  getContentViewportSize(): { width: number; height: number } | null;
   setThreadMaterial(index: number, params: Partial<ThreadParams>): void;
   getThreadName(index: number): string | undefined;
   setThreadName(index: number, name: string): void;
@@ -507,8 +509,19 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
     getThreadOpenTail(index: number) {
       return wrapRef.current?.getCommittedOpenTail(index) ?? null;
     },
+    getContentViewportSize() {
+      const loom = loomRef.current;
+      if (!loom) return null;
+      const w = loom.app.renderer.width;
+      const h = loom.app.renderer.height;
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+      return { width: w, height: h };
+    },
     tryLoadCreation(creation: SavedCreation) {
       if (!wrapRef.current || !sagRef.current) return false;
+      const loom = loomRef.current;
+      const viewW = loom?.app.renderer.width ?? 0;
+      const viewH = loom?.app.renderer.height ?? 0;
       const threads = creation?.threads;
       if (!Array.isArray(threads)) return false;
       isIdleRef.current = false;
@@ -524,9 +537,15 @@ const LoomCanvasInner = forwardRef<LoomCanvasHandle, LoomCanvasProps>(function L
               ? t.polyline.map((p) => ({ x: p.x, y: p.y }))
               : undefined,
           openTail:
-            t.openTail != null && typeof t.openTail.x === 'number' && typeof t.openTail.y === 'number'
-              ? { x: t.openTail.x, y: t.openTail.y }
-              : undefined,
+            t.openTailNorm != null &&
+            typeof t.openTailNorm.x === 'number' &&
+            typeof t.openTailNorm.y === 'number' &&
+            viewW > 0 &&
+            viewH > 0
+              ? { x: t.openTailNorm.x * viewW, y: t.openTailNorm.y * viewH }
+              : t.openTail != null && typeof t.openTail.x === 'number' && typeof t.openTail.y === 'number'
+                ? { x: t.openTail.x, y: t.openTail.y }
+                : undefined,
           textureId: t.textureId,
           lineWidth: t.lineWidth,
           color: t.color,

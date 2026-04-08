@@ -17,6 +17,11 @@ export interface SavedCreationThread {
   polyline?: Array<{ x: number; y: number }>;
   /** Free end in content space when the thread leaves the last anchor into empty hoop interior. */
   openTail?: { x: number; y: number };
+  /**
+   * Normalized free end in content space (0..1 relative to current loom view size).
+   * Prefer this on restore so open tails stay aligned after canvas resize.
+   */
+  openTailNorm?: { x: number; y: number };
   textureId: MaterialTextureId;
   lineWidth: number;
   /** Pixi tint number (0xRRGGBB). */
